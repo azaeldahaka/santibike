@@ -66,6 +66,11 @@ drop policy if exists "Allow public update on store_settings" on public.store_se
 create policy "Allow public update on store_settings" on public.store_settings
   for update using (true);
 
+-- Permite insertar configuración de costos
+drop policy if exists "Allow public insert on store_settings" on public.store_settings;
+create policy "Allow public insert on store_settings" on public.store_settings
+  for insert with check (true);
+
 -- 5. INSERTAR CONFIGURACIÓN INICIAL (Si no existe)
 insert into public.store_settings (
   id,

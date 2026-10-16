@@ -87,12 +87,11 @@ export function saveStoredCosts(costs: FinancialCosts): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(COSTS_KEY, JSON.stringify(costs));
-    // Asynchronously save to Supabase
+    // Asynchronously update in Supabase
     if (supabase) {
       supabase
         .from('store_settings')
-        .upsert({
-          id: 'default_settings',
+        .update({
           blank_garment_cost: costs.blankGarmentCost,
           printing_cost: costs.printingCost,
           packaging_cost: costs.packagingCost,
@@ -101,13 +100,46 @@ export function saveStoredCosts(costs: FinancialCosts): void {
           sale_price: costs.salePrice,
           updated_at: new Date().toISOString(),
         })
+        .eq('id', 'default_settings')
         .then(({ error }) => {
-          if (error) console.warn('Supabase settings upsert warning:', error.message);
+          if (error) console.warn('Supabase settings update warning:', error.message);
         });
     }
   } catch (e) {
     console.error('Error saving costs to localStorage', e);
   }
+}
+
+export async function updateStorePrice(newPrice: number): Promise<boolean> {
+  const current = getStoredCosts();
+  const updated = { ...current, salePrice: newPrice };
+  
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(COSTS_KEY, JSON.stringify(updated));
+  }
+
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('store_settings')
+        .update({
+          sale_price: newPrice,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', 'default_settings');
+
+      if (error) {
+        console.warn('Could not update store price in Supabase:', error.message);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.warn('Network error updating store price:', e);
+      return false;
+    }
+  }
+
+  return true;
 }
 
 // ----------------------------------------------------

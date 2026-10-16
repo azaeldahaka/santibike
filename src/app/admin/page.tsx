@@ -10,11 +10,12 @@ import {
   updateOrderStatus,
   getStoredCosts,
   saveStoredCosts,
+  updateStorePrice,
   formatPrice,
   fetchLiveOrders,
   fetchLiveCosts,
 } from '@/lib/storage';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { AdminPinLogin } from '@/components/AdminPinLogin';
 import {
   DollarSign,
@@ -40,6 +41,12 @@ import {
   LogOut,
   Database,
   Key,
+  Tag,
+  Activity,
+  Sparkles,
+  Save,
+  AlertCircle,
+  Lightbulb,
 } from 'lucide-react';
 import { INITIAL_ORDERS } from '@/data/mockData';
 
@@ -47,10 +54,28 @@ export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [costs, setCosts] = useState<FinancialCosts>(getStoredCosts());
+  const [simCosts, setSimCosts] = useState<FinancialCosts>(getStoredCosts());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [copiedBatch, setCopiedBatch] = useState(false);
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<'orders' | 'calculator'>('orders');
+
+  // Official Store Price state (independent from experimental calculator)
+  const [officialPriceInput, setOfficialPriceInput] = useState<number>(costs.salePrice);
+  const [isSavingOfficialPrice, setIsSavingOfficialPrice] = useState(false);
+  const [officialPriceSaveMsg, setOfficialPriceSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Diagnostic modal state
+  const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
+  const [diagnosticLoading, setDiagnosticLoading] = useState(false);
+  const [diagnosticResult, setDiagnosticResult] = useState<{
+    ordersCount: number | null;
+    cloudPrice: number | null;
+    status: 'success' | 'error';
+    errorMsg?: string;
+  } | null>(null);
 
   // Change PIN modal state
   const [isChangePinOpen, setIsChangePinOpen] = useState(false);
@@ -69,8 +94,11 @@ export default function AdminDashboardPage() {
   // Fetch live orders and costs when authenticated
   useEffect(() => {
     if (isAuthenticated) {
+      const initialCosts = getStoredCosts();
       setOrders(getStoredOrders());
-      setCosts(getStoredCosts());
+      setCosts(initialCosts);
+      setSimCosts(initialCosts);
+      setOfficialPriceInput(initialCosts.salePrice);
 
       if (isSupabaseConfigured) {
         setIsCloudSyncing(true);
@@ -80,10 +108,92 @@ export default function AdminDashboardPage() {
         });
         fetchLiveCosts().then((liveCosts) => {
           setCosts(liveCosts);
+          setSimCosts(liveCosts);
+          setOfficialPriceInput(liveCosts.salePrice);
         });
       }
     }
   }, [isAuthenticated]);
+
+  const handleSaveOfficialPrice = async (priceToSave?: number) => {
+    const targetPrice = priceToSave !== undefined ? priceToSave : officialPriceInput;
+    if (!targetPrice || targetPrice < 1000) {
+      setOfficialPriceSaveMsg({ type: 'error', text: 'Por favor ingresá un precio válido mayor a $1.000.' });
+      return;
+    }
+    setIsSavingOfficialPrice(true);
+    setOfficialPriceSaveMsg(null);
+    try {
+      const ok = await updateStorePrice(targetPrice);
+      if (ok) {
+        setCosts((prev) => ({ ...prev, salePrice: targetPrice }));
+        setSimCosts((prev) => ({ ...prev, salePrice: targetPrice }));
+        setOfficialPriceInput(targetPrice);
+        setOfficialPriceSaveMsg({
+          type: 'success',
+          text: `¡Precio oficial actualizado a ${formatPrice(targetPrice)}! Ya se ve reflejado en la tienda de los clientes.`,
+        });
+      } else {
+        setOfficialPriceSaveMsg({
+          type: 'error',
+          text: 'Se guardó en este navegador, pero no se pudo sincronizar con Supabase.',
+        });
+      }
+    } catch (e) {
+      setOfficialPriceSaveMsg({ type: 'error', text: 'Error al actualizar el precio oficial.' });
+    } finally {
+      setIsSavingOfficialPrice(false);
+      setTimeout(() => setOfficialPriceSaveMsg(null), 5000);
+    }
+  };
+
+  const runDiagnostic = async () => {
+    setIsDiagnosticOpen(true);
+    setDiagnosticLoading(true);
+    setDiagnosticResult(null);
+
+    if (!supabase) {
+      setDiagnosticLoading(false);
+      setDiagnosticResult({
+        ordersCount: null,
+        cloudPrice: null,
+        status: 'error',
+        errorMsg: 'Supabase no está configurado en las variables de entorno de este navegador.',
+      });
+      return;
+    }
+
+    try {
+      const [ordersRes, settingsRes] = await Promise.all([
+        supabase.from('orders').select('id', { count: 'exact' }),
+        supabase.from('store_settings').select('*').eq('id', 'default_settings').single(),
+      ]);
+
+      if (ordersRes.error || settingsRes.error) {
+        setDiagnosticResult({
+          ordersCount: ordersRes.count || null,
+          cloudPrice: settingsRes.data?.sale_price || null,
+          status: 'error',
+          errorMsg: ordersRes.error?.message || settingsRes.error?.message,
+        });
+      } else {
+        setDiagnosticResult({
+          ordersCount: ordersRes.count ?? (ordersRes.data ? ordersRes.data.length : 0),
+          cloudPrice: Number(settingsRes.data.sale_price),
+          status: 'success',
+        });
+      }
+    } catch (err: any) {
+      setDiagnosticResult({
+        ordersCount: null,
+        cloudPrice: null,
+        status: 'error',
+        errorMsg: err?.message || 'Error de conexión de red con Supabase.',
+      });
+    } finally {
+      setDiagnosticLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -155,15 +265,29 @@ export default function AdminDashboardPage() {
     saveStoredCosts(updated);
   };
 
+  const handleSimCostChange = (field: keyof FinancialCosts, value: number) => {
+    setSimCosts((prev) => ({ ...prev, [field]: value }));
+  };
+
   // Active orders (excluding cancelled) for realistic production & revenue KPIs
   const activeOrders = orders.filter((ord) => ord.status !== 'cancelled');
 
-  // Unit Economics calculations (0% gateway fee for bank transfers)
+  // Official Unit Economics calculations (0% gateway fee for bank transfers)
   const directCosts = costs.blankGarmentCost + costs.printingCost + costs.packagingCost;
   const totalUnitCost = directCosts; // Sin comisión de pasarela
   const currentUnitProfit = costs.salePrice - totalUnitCost;
   const currentMarginPercent =
     costs.salePrice > 0 ? (currentUnitProfit / costs.salePrice) * 100 : 0;
+
+  // Simulator Unit Economics calculations (Tab 2)
+  const simDirectCosts = simCosts.blankGarmentCost + simCosts.printingCost + simCosts.packagingCost;
+  const simTotalUnitCost = simDirectCosts;
+  const simUnitProfit = simCosts.salePrice - simTotalUnitCost;
+  const simMarginPercent =
+    simCosts.salePrice > 0 ? (simUnitProfit / simCosts.salePrice) * 100 : 0;
+  const simTargetMarginDecimal = (simCosts.targetMarginPercent || 50) / 100;
+  const simSuggestedPrice =
+    simTargetMarginDecimal < 1 ? simDirectCosts / (1 - simTargetMarginDecimal) : simDirectCosts * 2;
 
   // Suggested price based on target margin formula: Suggested = DirectCost / (1 - TargetMargin/100)
   const targetMarginDecimal = (costs.targetMarginPercent || 50) / 100;
@@ -196,6 +320,7 @@ export default function AdminDashboardPage() {
     .reduce((sum, ord) => sum + ord.remainingAmount, 0);
 
   const projectedTotalProfit = currentUnitProfit * totalUnits;
+  const simProjectedProfit = simUnitProfit * totalUnits;
 
   // Consolidated Production Matrix
   const SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
@@ -329,27 +454,26 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Cloud Sync Status Badge */}
-            {isCloudSyncing ? (
-              <span className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 animate-pulse">
-                <Database className="w-3.5 h-3.5" />
-                <span>Sincronizando...</span>
-              </span>
-            ) : isSupabaseConfigured ? (
-              <span className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold flex items-center gap-1.5" title="Conectado a la base de datos Supabase en la nube">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Supabase Conectado</span>
-              </span>
-            ) : (
-              <span className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold flex items-center gap-1.5" title="Operando en almacenamiento local">
-                <span className="w-2 h-2 rounded-full bg-amber-400" />
-                <span>Modo Local</span>
-              </span>
-            )}
+            {/* Supabase Diagnostic Button */}
+            <button
+              onClick={runDiagnostic}
+              className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all hover:scale-[1.02] cursor-pointer ${
+                isCloudSyncing
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 animate-pulse'
+                  : isSupabaseConfigured
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:border-emerald-500/40'
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+              }`}
+              title="Hacé clic para verificar el estado de la base de datos Supabase"
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>{isCloudSyncing ? 'Sincronizando...' : isSupabaseConfigured ? '🟢 Supabase Conectado' : '🟠 Modo Local'}</span>
+              <Activity className="w-3 h-3 text-slate-400 ml-0.5" />
+            </button>
 
             <button
               onClick={handleResetData}
-              className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-slate-300 border border-white/[0.08] flex items-center gap-1.5 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-slate-300 border border-white/[0.08] flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Restablecer órdenes iniciales"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -380,7 +504,7 @@ export default function AdminDashboardPage() {
 
             <button
               onClick={handleLogout}
-              className="px-3 py-1.5 sm:py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-xs sm:text-sm font-semibold text-red-400 border border-red-500/30 flex items-center gap-1.5 transition-colors"
+              className="px-3 py-1.5 sm:py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-xs sm:text-sm font-semibold text-red-400 border border-red-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Cerrar sesión de administrador"
             >
               <LogOut className="w-4 h-4" />
@@ -389,73 +513,187 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Top KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-lg">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Prendas Reservadas</span>
-              <Package className="w-4 h-4 text-emerald-400" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-white">{totalUnits} un.</p>
-            <p className="text-[11px] text-slate-400 mt-1">
-              {orders.length} pedidos registrados
-            </p>
-          </div>
+        {/* View Tabs Switcher */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.08] pb-3">
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'orders'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08]'
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            <span>1. Pedidos & Producción Taller</span>
+          </button>
 
-          <div className="p-5 rounded-2xl bg-[#11141a] border border-emerald-500/30 shadow-lg">
-            <div className="flex items-center justify-between text-emerald-400 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Señas Recaudadas</span>
-              <DollarSign className="w-4 h-4 text-emerald-400" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-400">
-              {formatPrice(totalDepositsCollected)}
-            </p>
-            <p className="text-[11px] text-slate-400 mt-1">
-              Dinero en caja para pagar taller
-            </p>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-lg">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Saldo por Cobrar</span>
-              <Clock className="w-4 h-4 text-amber-400" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-amber-300">
-              {formatPrice(pendingCollection)}
-            </p>
-            <p className="text-[11px] text-slate-400 mt-1">
-              Cobro restante contra entrega en local
-            </p>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-lg">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Ganancia Proyectada</span>
-              <TrendingUp className="w-4 h-4 text-emerald-400" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-white">
-              {formatPrice(projectedTotalProfit)}
-            </p>
-            <p className="text-[11px] text-emerald-400 font-semibold mt-1">
-              Margen neto actual: {currentMarginPercent.toFixed(1)}%
-            </p>
-          </div>
+          <button
+            onClick={() => setActiveTab('calculator')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'calculator'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08]'
+            }`}
+          >
+            <Calculator className="w-4 h-4" />
+            <span>2. Calculadora & Simulador</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/20 text-white font-bold lowercase">
+              lab
+            </span>
+          </button>
         </div>
 
-        {/* Middle Section: Consolidated Production Matrix & Unit Economics Calculator */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Production Matrix for the Screen Printer (7 cols) */}
-          <div className="lg:col-span-6 p-6 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                  <Scissors className="w-4 h-4" />
+        {activeTab === 'orders' ? (
+          <div className="space-y-8 animate-in fade-in">
+            {/* Top KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-5 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-lg">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">Prendas Reservadas</span>
+                  <Package className="w-4 h-4 text-emerald-400" />
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-white">Consolidado para el Taller</h3>
-                  <p className="text-xs text-slate-400">Talles exactos a estampar en la tanda</p>
+                <p className="text-2xl sm:text-3xl font-black text-white">{totalUnits} un.</p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {orders.length} pedidos registrados
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#11141a] border border-emerald-500/30 shadow-lg">
+                <div className="flex items-center justify-between text-emerald-400 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">Señas Recaudadas</span>
+                  <DollarSign className="w-4 h-4 text-emerald-400" />
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-emerald-400">
+                  {formatPrice(totalDepositsCollected)}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Dinero en caja para pagar taller
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-lg">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">Saldo por Cobrar</span>
+                  <Clock className="w-4 h-4 text-amber-400" />
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-amber-300">
+                  {formatPrice(pendingCollection)}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Cobro restante contra entrega en local
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-lg">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">Ganancia Proyectada</span>
+                  <TrendingUp className="w-4 h-4 text-emerald-400" />
+                </div>
+                <p className="text-2xl sm:text-3xl font-black text-white">
+                  {formatPrice(projectedTotalProfit)}
+                </p>
+                <p className="text-[11px] text-emerald-400 font-semibold mt-1">
+                  Margen neto actual: {currentMarginPercent.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+
+            {/* Dedicated Official Store Price Card */}
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-[#11141a] via-[#11141a] to-emerald-950/20 border border-emerald-500/30 shadow-xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <Tag className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-white">Precio Oficial de la Remera en la Tienda</h3>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold uppercase">
+                        Visible en Vivo
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      Modificá el precio oficial que ven los clientes. Al guardarlo, impacta en Supabase y en la web al instante.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-left sm:text-right bg-white/[0.02] sm:bg-transparent p-3 sm:p-0 rounded-xl border border-white/[0.06] sm:border-0">
+                  <span className="text-xs text-slate-400 block">Precio actual activo:</span>
+                  <p className="text-2xl font-black text-emerald-400 font-mono">
+                    {formatPrice(costs.salePrice)}
+                  </p>
                 </div>
               </div>
+
+              {officialPriceSaveMsg && (
+                <div
+                  className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in ${
+                    officialPriceSaveMsg.type === 'success'
+                      ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                      : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4 shrink-0" />
+                  <span>{officialPriceSaveMsg.text}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end pt-1">
+                <div className="sm:col-span-5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                    Modificar Precio de Venta al Público ($):
+                  </label>
+                  <input
+                    type="number"
+                    step="500"
+                    placeholder="0"
+                    value={officialPriceInput === 0 ? '' : officialPriceInput}
+                    onChange={(e) =>
+                      setOfficialPriceInput(e.target.value === '' ? 0 : Number(e.target.value))
+                    }
+                    className="w-full text-xl font-mono font-bold py-2.5 px-4 rounded-xl bg-white/[0.04] border border-emerald-500/40 text-emerald-300 focus:border-emerald-500 focus:outline-none placeholder-slate-600"
+                  />
+                </div>
+
+                <div className="sm:col-span-4 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs space-y-1">
+                  <div className="flex justify-between text-slate-300">
+                    <span>Seña previa (50%):</span>
+                    <strong className="text-emerald-400 font-mono">
+                      {formatPrice((officialPriceInput || 0) * 0.5)}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between text-slate-400 text-[11px]">
+                    <span>Saldo a pagar al retirar (50%):</span>
+                    <span className="font-mono">{formatPrice((officialPriceInput || 0) * 0.5)}</span>
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
+                  <button
+                    onClick={() => handleSaveOfficialPrice()}
+                    disabled={isSavingOfficialPrice}
+                    className="w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isSavingOfficialPrice ? 'Guardando...' : 'Guardar en Tienda'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Consolidado para el Taller */}
+            <div className="p-6 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-xl space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <Scissors className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Consolidado para el Taller</h3>
+                    <p className="text-xs text-slate-400">Talles exactos a estampar en la tanda</p>
+                  </div>
+                </div>
 
               <button
                 onClick={handleCopyProduction}
@@ -537,203 +775,6 @@ export default function AdminDashboardPage() {
               💡 <strong>Tip para el taller:</strong> Podés hacer clic en &quot;Copiar Lista&quot; y pegarla directamente en WhatsApp para encargar la tela y el estampado al taller sin errores de conteo.
             </div>
           </div>
-
-          {/* Unit Economics & Margin Calculator (5 cols) */}
-          <div className="lg:col-span-6 p-6 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-xl space-y-5">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-white/[0.08]">
-              <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
-                <Calculator className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white">Calculadora de Márgenes & Precios</h3>
-                <p className="text-xs text-slate-400">Ajustá costos unitarios y observá el precio sugerido</p>
-              </div>
-            </div>
-
-            {/* Cost inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div>
-                <label className="text-slate-400 block mb-1">Prenda base lisa ($):</label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={costs.blankGarmentCost || ''}
-                  onChange={(e) =>
-                    handleCostChange('blankGarmentCost', e.target.value === '' ? 0 : Number(e.target.value))
-                  }
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none placeholder-slate-600 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Estampado frente/dorso ($):</label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={costs.printingCost || ''}
-                  onChange={(e) =>
-                    handleCostChange('printingCost', e.target.value === '' ? 0 : Number(e.target.value))
-                  }
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none placeholder-slate-600 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Packaging y etiquetas ($):</label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={costs.packagingCost || ''}
-                  onChange={(e) =>
-                    handleCostChange('packagingCost', e.target.value === '' ? 0 : Number(e.target.value))
-                  }
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none placeholder-slate-600 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Precio de Venta al Público ($):</label>
-                <input
-                  type="number"
-                  step="500"
-                  placeholder="0"
-                  value={costs.salePrice || ''}
-                  onChange={(e) =>
-                    handleCostChange('salePrice', e.target.value === '' ? 0 : Number(e.target.value))
-                  }
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-emerald-500/30 text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none placeholder-slate-600 font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Price change notice */}
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] text-[11px] text-slate-400">
-              <span className="text-emerald-400 font-bold">✓</span>
-              <span>Al modificar el <strong>Precio de Venta</strong>, se actualiza automáticamente el valor de la remera y de la seña en la tienda de los clientes.</span>
-            </div>
-
-            {/* Zero Commission Notice */}
-            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/[0.07] border border-emerald-500/20 text-xs text-emerald-300">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span><strong>Comisión de pasarela: 0%</strong> (Cobro directo por transferencia a Naranja X &bull; Ahorrás ~$2.000 por remera frente a pasarelas tradicionales).</span>
-            </div>
-
-            {/* Target Margin Slider / Input */}
-            <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-300 font-semibold">Margen de Ganancia Objetivo:</span>
-                <span className="text-emerald-400 font-bold">{costs.targetMarginPercent}%</span>
-              </div>
-              <input
-                type="range"
-                min="20"
-                max="70"
-                value={costs.targetMarginPercent}
-                onChange={(e) => handleCostChange('targetMarginPercent', Number(e.target.value))}
-                className="w-full accent-emerald-500 cursor-pointer"
-              />
-            </div>
-
-            {/* Calculated Results Box */}
-            <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-950/30 to-[#0e1117] border border-emerald-500/20 space-y-2 text-xs">
-              <div className="flex justify-between text-slate-300">
-                <span>Costo Total de Fabricación por Prenda:</span>
-                <span className="font-bold text-white font-mono">{formatPrice(totalUnitCost)}</span>
-              </div>
-              <div className="flex justify-between text-slate-300">
-                <span>Precio Sugerido para margen de {costs.targetMarginPercent}%:</span>
-                <span className="font-black text-emerald-400 text-sm font-mono">{formatPrice(suggestedPrice)}</span>
-              </div>
-              <div className="flex justify-between text-slate-300 border-t border-white/[0.08] pt-2">
-                <span>Ganancia Neta por Prenda (al precio de {formatPrice(costs.salePrice)}):</span>
-                <span className="font-black text-emerald-300 text-sm font-mono">{formatPrice(currentUnitProfit)} ({currentMarginPercent.toFixed(1)}%)</span>
-              </div>
-              <div className="flex justify-between text-slate-300">
-                <span>Ganancia Proyectada en Tanda ({totalUnits} prendas activas):</span>
-                <span className="font-black text-white text-base font-mono">{formatPrice(projectedTotalProfit)}</span>
-              </div>
-            </div>
-
-            {/* Practical Example with Real Numbers - 100% Dynamic */}
-            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-3 text-xs">
-              <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">💡</span>
-                  <span className="font-bold text-white text-sm">Ejemplo en Tiempo Real con tus Números</span>
-                </div>
-                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded font-semibold border border-emerald-500/20">
-                  Cálculo Automático
-                </span>
-              </div>
-
-              <p className="text-slate-300 leading-relaxed text-[11px]">
-                Con los costos y el precio de venta ingresados arriba, así rinde cada remera en la tanda:
-              </p>
-
-              {/* 3 cost pills */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
-                <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">1. Remera Lisa</span>
-                  <span className="font-mono font-bold text-white text-sm">{formatPrice(costs.blankGarmentCost)}</span>
-                  <span className="text-[10px] text-slate-500 block">Algodón peinado</span>
-                </div>
-                <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">2. Estampa Taller</span>
-                  <span className="font-mono font-bold text-white text-sm">{formatPrice(costs.printingCost)}</span>
-                  <span className="text-[10px] text-slate-500 block">Pecho, espalda y logos</span>
-                </div>
-                <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">3. Packaging</span>
-                  <span className="font-mono font-bold text-white text-sm">{formatPrice(costs.packagingCost)}</span>
-                  <span className="text-[10px] text-slate-500 block">Bolsa + stickers</span>
-                </div>
-              </div>
-
-              {/* Total fabrication and sale */}
-              <div className="p-3 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/20 space-y-2 text-xs">
-                <div className="flex justify-between items-center text-slate-300">
-                  <span>Costo total de confección por remera (Taller):</span>
-                  <span className="font-mono text-white font-bold">{formatPrice(totalUnitCost)}</span>
-                </div>
-                <div className="flex justify-between items-center text-slate-300">
-                  <span>Precio de venta al cliente en la web:</span>
-                  <span className="font-mono text-white font-bold">{formatPrice(costs.salePrice)}</span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t border-emerald-500/20 text-emerald-300 font-bold">
-                  <span>👉 Tu ganancia limpia por remera:</span>
-                  <span className="font-mono text-base font-black">{formatPrice(currentUnitProfit)} ({currentMarginPercent.toFixed(1)}% de margen)</span>
-                </div>
-              </div>
-
-              {/* Step by step flow explanation */}
-              <div className="space-y-2 text-[11px] text-slate-400 leading-relaxed pt-1">
-                <div className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">①</span>
-                  <p>
-                    <strong className="text-slate-200">El cliente reserva y paga la seña del 50% ({formatPrice(costs.salePrice * 0.5)}):</strong> Con ese dinero que entra a Naranja X cubrís los {formatPrice(totalUnitCost)} del taller{costs.salePrice * 0.5 >= totalUnitCost ? ` y te quedan ${formatPrice((costs.salePrice * 0.5) - totalUnitCost)} a favor de entrada` : ''}. <em>¡No ponés plata de tu bolsillo para arrancar la confección!</em>
-                  </p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">②</span>
-                  <p>
-                    <strong className="text-slate-200">El cliente retira la remera en el taller y paga el saldo ({formatPrice(costs.salePrice * 0.5)}):</strong> Ese cobro restante es tu ganancia neta en mano.
-                  </p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">③</span>
-                  <div className="text-slate-300">
-                    <strong className="text-white block mb-0.5">Escala de ganancia proyectada según la tanda:</strong>
-                    <div className="space-y-0.5 text-slate-400">
-                      <div>&bull; Vendiendo <strong>10 remeras</strong> = <span className="text-emerald-400 font-semibold">{formatPrice(currentUnitProfit * 10)} limpios</span>.</div>
-                      <div>&bull; Vendiendo <strong>20 remeras</strong> = <span className="text-emerald-400 font-semibold">{formatPrice(currentUnitProfit * 20)} limpios</span>.</div>
-                      <div>&bull; Vendiendo <strong>50 remeras</strong> = <span className="text-emerald-400 font-semibold">{formatPrice(currentUnitProfit * 50)} limpios</span>.</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Order Management Table */}
         <div className="p-6 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-xl space-y-5">
@@ -892,7 +933,344 @@ export default function AdminDashboardPage() {
             </table>
           </div>
         </div>
-      </main>
+      </div>
+    ) : (
+      <div className="space-y-8 animate-in fade-in max-w-5xl mx-auto">
+        {/* Simulator Header / Intro Banner */}
+        <div className="p-6 rounded-2xl bg-gradient-to-br from-[#11141a] via-[#11141a] to-emerald-950/20 border border-emerald-500/30 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <Calculator className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-white">Simulador de Costos & Márgenes</h2>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold uppercase">
+                    Modo Laboratorio
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 max-w-xl">
+                  Espacio para probar y simular precios sin alterar la tienda. Modificá los valores libremente. Si querés que este precio sea el oficial que ven los clientes, hacé clic en &ldquo;Aplicar a la Tienda&rdquo;.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => handleSaveOfficialPrice(simCosts.salePrice)}
+                disabled={isSavingOfficialPrice}
+                className="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                <Save className="w-4 h-4" />
+                <span>{isSavingOfficialPrice ? 'Guardando...' : `Aplicar ${formatPrice(simCosts.salePrice)} a la Tienda`}</span>
+              </button>
+            </div>
+          </div>
+
+          {officialPriceSaveMsg && (
+            <div
+              className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in ${
+                officialPriceSaveMsg.type === 'success'
+                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                  : 'bg-red-500/10 border border-red-500/30 text-red-400'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 shrink-0" />
+              <span>{officialPriceSaveMsg.text}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Main Interactive Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Costos de Fabricación */}
+          <div className="p-6 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <Scissors className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Costos Directos por Prenda</h3>
+                  <p className="text-[11px] text-slate-400">Lo que te cobra el taller y proveedores</p>
+                </div>
+              </div>
+              <span className="text-xs font-mono font-bold text-slate-300">
+                Total: {formatPrice(simDirectCosts)}
+              </span>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  1. Prenda Lisa / Confección ($):
+                </label>
+                <input
+                  type="number"
+                  step="500"
+                  placeholder="0"
+                  value={simCosts.blankGarmentCost === 0 ? '' : simCosts.blankGarmentCost}
+                  onChange={(e) =>
+                    handleSimCostChange(
+                      'blankGarmentCost',
+                      e.target.value === '' ? 0 : Number(e.target.value)
+                    )
+                  }
+                  className="w-full font-mono py-2 px-3 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none placeholder-slate-600"
+                />
+                <p className="text-[10px] text-slate-500 mt-0.5">Costo de la tela y armado de la remera.</p>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  2. Estampado / DTF / Serigrafía ($):
+                </label>
+                <input
+                  type="number"
+                  step="500"
+                  placeholder="0"
+                  value={simCosts.printingCost === 0 ? '' : simCosts.printingCost}
+                  onChange={(e) =>
+                    handleSimCostChange(
+                      'printingCost',
+                      e.target.value === '' ? 0 : Number(e.target.value)
+                    )
+                  }
+                  className="w-full font-mono py-2 px-3 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none placeholder-slate-600"
+                />
+                <p className="text-[10px] text-slate-500 mt-0.5">Costo de estampa delantera y trasera.</p>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  3. Packaging / Bolsa / Etiquetas ($):
+                </label>
+                <input
+                  type="number"
+                  step="100"
+                  placeholder="0"
+                  value={simCosts.packagingCost === 0 ? '' : simCosts.packagingCost}
+                  onChange={(e) =>
+                    handleSimCostChange(
+                      'packagingCost',
+                      e.target.value === '' ? 0 : Number(e.target.value)
+                    )
+                  }
+                  className="w-full font-mono py-2 px-3 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none placeholder-slate-600"
+                />
+                <p className="text-[10px] text-slate-500 mt-0.5">Bolsa plástica cristal, calcos o tarjeta.</p>
+              </div>
+
+              <div className="pt-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between">
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Costo de Pasarela de Pago:</span>
+                  <strong className="text-emerald-400 text-xs">0% Comisión (Transferencia Bancaria Directa)</strong>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold">
+                  Ahorro $0 en comisiones
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Margen y Precio Simulado */}
+          <div className="p-6 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Margen y Precio Simulado</h3>
+                  <p className="text-[11px] text-slate-400">Calculá tu ganancia limpia por remera</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-slate-300 font-semibold">
+                    Margen de Ganancia Deseado (%):
+                  </label>
+                  <span className="font-mono font-bold text-emerald-400">
+                    {simCosts.targetMarginPercent}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="20"
+                  max="80"
+                  step="5"
+                  value={simCosts.targetMarginPercent}
+                  onChange={(e) =>
+                    handleSimCostChange('targetMarginPercent', Number(e.target.value))
+                  }
+                  className="w-full accent-emerald-500 cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-500">
+                  <span>20% (Bajo)</span>
+                  <span>50% (Equilibrado recomendado)</span>
+                  <span>80% (Alto)</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex justify-between items-center">
+                <div>
+                  <span className="text-[11px] text-slate-300 block font-semibold">
+                    Precio Sugerido para {simCosts.targetMarginPercent}% de Margen:
+                  </span>
+                  <p className="text-[10px] text-slate-400">Fórmula: Costo / (1 - Margen%)</p>
+                </div>
+                <span className="text-base font-black font-mono text-emerald-300">
+                  {formatPrice(Math.round(simSuggestedPrice))}
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Precio de Venta Simulado ($):
+                </label>
+                <input
+                  type="number"
+                  step="500"
+                  placeholder="0"
+                  value={simCosts.salePrice === 0 ? '' : simCosts.salePrice}
+                  onChange={(e) =>
+                    handleSimCostChange(
+                      'salePrice',
+                      e.target.value === '' ? 0 : Number(e.target.value)
+                    )
+                  }
+                  className="w-full text-lg font-mono font-bold py-2 px-3 rounded-xl bg-white/[0.04] border border-emerald-500/40 text-emerald-300 focus:border-emerald-500 focus:outline-none placeholder-slate-600"
+                />
+              </div>
+
+              {/* Resultados del Precio Simulado */}
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1.5">
+                <div className="flex justify-between items-center text-slate-300">
+                  <span>Ganancia neta por remera:</span>
+                  <strong className={`font-mono ${simUnitProfit > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {formatPrice(simUnitProfit)} ({simMarginPercent.toFixed(1)}%)
+                  </strong>
+                </div>
+                <div className="flex justify-between items-center text-slate-400 text-[11px]">
+                  <span>Seña 50% requerida al cliente:</span>
+                  <span className="font-mono text-slate-300">{formatPrice(simCosts.salePrice * 0.5)}</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-400 text-[11px]">
+                  <span>Saldo restante al entregar:</span>
+                  <span className="font-mono text-slate-300">{formatPrice(simCosts.salePrice * 0.5)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Proyección con las unidades de la preventa */}
+        <div className="p-6 rounded-2xl bg-[#11141a] border border-white/[0.08] shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-white">Proyección Financiera con Prendas Actuales</h3>
+              <p className="text-xs text-slate-400">
+                Si vendés las <strong>{totalUnits} prendas</strong> reservadas actualmente con este precio simulado:
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-[10px] text-slate-400 block uppercase font-bold">Ingresos Totales</span>
+                <span className="text-base font-mono font-bold text-white">
+                  {formatPrice(simCosts.salePrice * totalUnits)}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-[10px] text-slate-400 block uppercase font-bold">Costo Total Taller</span>
+                <span className="text-base font-mono font-bold text-amber-400">
+                  {formatPrice(simTotalUnitCost * totalUnits)}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                <span className="text-[10px] text-emerald-400 block uppercase font-bold">Ganancia Neta en Mano</span>
+                <span className="text-base font-mono font-black text-emerald-400">
+                  {formatPrice(simProjectedProfit)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Guía Explicativa con Ejemplo Real */}
+        <div className="p-6 rounded-2xl bg-gradient-to-br from-[#11141a] to-blue-950/20 border border-blue-500/20 shadow-xl space-y-4">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-white/[0.08]">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+              <Lightbulb className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">Guía Práctica: ¿Cómo calcular y entender los números?</h3>
+              <p className="text-[11px] text-slate-400">Ejemplo con números redondos para tomar decisiones seguras</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+              <div className="flex items-center gap-2 text-slate-200 font-bold">
+                <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-300 text-[10px] flex items-center justify-center">1</span>
+                <span>Costos de Fabricación</span>
+              </div>
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                Sumás lo que pagás por prenda:
+              </p>
+              <div className="font-mono text-[11px] text-slate-300 bg-black/30 p-2.5 rounded-lg space-y-1">
+                <div>• Prenda lisa: $6.000</div>
+                <div>• Estampa delantera y trasera: $2.500</div>
+                <div>• Bolsa y etiquetas: $500</div>
+                <div className="border-t border-white/[0.1] pt-1 font-bold text-amber-300">
+                  Total Costo Taller = $9.000
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+              <div className="flex items-center gap-2 text-emerald-300 font-bold">
+                <span className="w-5 h-5 rounded-full bg-emerald-950 text-emerald-400 text-[10px] flex items-center justify-center">2</span>
+                <span>Venta y Seña del 50%</span>
+              </div>
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                Si decidís vender cada remera a <strong>$18.000</strong>:
+              </p>
+              <div className="font-mono text-[11px] text-slate-300 bg-black/30 p-2.5 rounded-lg space-y-1">
+                <div>• Seña previa 50% = <strong>$9.000</strong></div>
+                <div className="text-[10px] text-emerald-400 leading-tight">
+                  👉 <strong>¡La seña cubre el 100% del taller!</strong> No ponés un solo peso de tu bolsillo.
+                </div>
+                <div className="border-t border-white/[0.1] pt-1">
+                  • Saldo al entregar = <strong>$9.000</strong> (100% ganancia en mano).
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+              <div className="flex items-center gap-2 text-blue-300 font-bold">
+                <span className="w-5 h-5 rounded-full bg-blue-950 text-blue-400 text-[10px] flex items-center justify-center">3</span>
+                <span>Resultado de la Tanda</span>
+              </div>
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                Si en la tanda vendés <strong>30 remeras</strong>:
+              </p>
+              <div className="font-mono text-[11px] text-slate-300 bg-black/30 p-2.5 rounded-lg space-y-1">
+                <div>• Total ventas: $540.000 (30 × $18.000)</div>
+                <div>• Pago taller: $270.000 (30 × $9.000)</div>
+                <div className="border-t border-white/[0.1] pt-1 font-bold text-emerald-400">
+                  Ganancia en tu bolsillo: $270.000
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </main>
 
       {/* Change PIN Modal */}
       {isChangePinOpen && (
@@ -910,7 +1288,7 @@ export default function AdminDashboardPage() {
               </div>
               <button
                 onClick={() => setIsChangePinOpen(false)}
-                className="text-slate-400 hover:text-white p-1 text-sm font-bold"
+                className="text-slate-400 hover:text-white p-1 text-sm font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -978,6 +1356,87 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Supabase Diagnostic Modal */}
+      {isDiagnosticOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md bg-[#11141a] border border-white/[0.1] rounded-2xl p-6 shadow-2xl relative space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <Database className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Estado de Base de Datos Supabase</h3>
+                  <p className="text-[11px] text-slate-400">Verificación de conectividad y tablas en vivo</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsDiagnosticOpen(false)}
+                className="text-slate-400 hover:text-white p-1 text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {diagnosticLoading ? (
+              <div className="py-8 text-center space-y-3">
+                <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-xs text-slate-400">Consultando tablas de Supabase en tiempo real...</p>
+              </div>
+            ) : diagnosticResult?.status === 'success' ? (
+              <div className="space-y-3 text-xs">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 shrink-0" />
+                  <span className="font-bold">¡Tu base de datos Supabase está 100% activa y conectada!</span>
+                </div>
+
+                <div className="space-y-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                  <div className="flex justify-between items-center text-slate-300 pb-1.5 border-b border-white/[0.06]">
+                    <span>URL del proyecto:</span>
+                    <span className="font-mono text-[11px] text-slate-400">dyiohbvpxxtcsfjuqakq.supabase.co</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-300 pb-1.5 border-b border-white/[0.06]">
+                    <span>Tabla <strong>store_settings</strong> (Configuración):</span>
+                    <span className="font-bold text-emerald-400 font-mono">
+                      Precio en nube: {formatPrice(diagnosticResult.cloudPrice || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-300">
+                    <span>Tabla <strong>orders</strong> (Pedidos registrados):</span>
+                    <span className="font-bold text-emerald-400 font-mono">
+                      {diagnosticResult.ordersCount} órdenes en la nube
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Cualquier pedido que hagan los clientes en sus celulares se guardará instantáneamente en esta base de datos en la nube.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3 text-xs">
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block">Aviso de sincronización:</strong>
+                    <span>{diagnosticResult?.errorMsg || 'No se pudo comunicar con Supabase.'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setIsDiagnosticOpen(false)}
+                className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-slate-200 transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
