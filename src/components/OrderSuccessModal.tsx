@@ -27,18 +27,30 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedAlias, setCopiedAlias] = useState(false);
 
+  const onCloseRef = React.useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const handleClose = () => {
+    onClose();
+    if (typeof window !== 'undefined' && window.history.state?.modal === 'order-success') {
+      window.history.back();
+    }
+  };
+
   useEffect(() => {
     if (!order) return;
 
-    window.history.pushState({ modal: 'order-success' }, '', '#reserva-confirmada');
+    window.history.pushState({ modal: 'order-success' }, '');
 
     const handlePopState = () => {
-      onClose();
+      onCloseRef.current();
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        handleSafeClose();
+        handleClose();
       }
     };
 
@@ -62,17 +74,9 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [order, onClose]);
+  }, [order]);
 
   if (!order) return null;
-
-  const handleSafeClose = () => {
-    if (typeof window !== 'undefined' && window.location.hash === '#reserva-confirmada') {
-      window.history.back();
-    } else {
-      onClose();
-    }
-  };
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(order.orderCode);
@@ -114,7 +118,7 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
   return (
     <div
       className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200"
-      onClick={handleSafeClose}
+      onClick={handleClose}
       aria-modal="true"
       role="dialog"
     >
@@ -126,14 +130,14 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
           {/* Ambient Glow */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-24 bg-emerald-500/20 blur-3xl pointer-events-none" />
 
-          {/* Close button */}
+          {/* Close button with min 44x44px touch target */}
           <button
             type="button"
-            onClick={handleSafeClose}
-            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+            onClick={handleClose}
+            className="w-11 h-11 flex items-center justify-center absolute top-3 right-3 text-slate-400 hover:text-white active:text-white rounded-xl bg-white/[0.04] hover:bg-white/[0.1] active:bg-white/[0.15] transition-colors cursor-pointer"
             aria-label="Cerrar modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
 
           <div className="text-center relative">
@@ -285,7 +289,7 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
 
             <button
               type="button"
-              onClick={handleSafeClose}
+              onClick={handleClose}
               className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer"
             >
               Volver a la tienda

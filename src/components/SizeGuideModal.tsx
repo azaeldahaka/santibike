@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, Ruler, HelpCircle } from 'lucide-react';
 import { SIZE_CHART } from '@/data/mockData';
 
@@ -10,18 +10,30 @@ interface SizeGuideModalProps {
 }
 
 export function SizeGuideModal({ isOpen, onClose }: SizeGuideModalProps) {
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const handleClose = () => {
+    onClose();
+    if (typeof window !== 'undefined' && window.history.state?.modal === 'size-guide') {
+      window.history.back();
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
-    window.history.pushState({ modal: 'size-guide' }, '', '#guia-talles');
+    window.history.pushState({ modal: 'size-guide' }, '');
 
     const handlePopState = () => {
-      onClose();
+      onCloseRef.current();
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        handleSafeClose();
+        handleClose();
       }
     };
 
@@ -34,22 +46,14 @@ export function SizeGuideModal({ isOpen, onClose }: SizeGuideModalProps) {
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const handleSafeClose = () => {
-    if (typeof window !== 'undefined' && window.location.hash === '#guia-talles') {
-      window.history.back();
-    } else {
-      onClose();
-    }
-  };
 
   return (
     <div
       className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200"
-      onClick={handleSafeClose}
+      onClick={handleClose}
       aria-modal="true"
       role="dialog"
     >
@@ -71,11 +75,11 @@ export function SizeGuideModal({ isOpen, onClose }: SizeGuideModalProps) {
             </div>
             <button
               type="button"
-              onClick={handleSafeClose}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+              onClick={handleClose}
+              className="w-11 h-11 flex items-center justify-center -mr-2 -mt-2 text-slate-400 hover:text-white active:text-white rounded-xl bg-white/[0.04] hover:bg-white/[0.1] active:bg-white/[0.15] transition-colors cursor-pointer shrink-0"
               aria-label="Cerrar modal"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
           </div>
 
@@ -119,7 +123,7 @@ export function SizeGuideModal({ isOpen, onClose }: SizeGuideModalProps) {
           <div className="mt-6 flex justify-end">
             <button
               type="button"
-              onClick={handleSafeClose}
+              onClick={handleClose}
               className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold bg-white/[0.06] hover:bg-white/[0.1] text-white transition-colors cursor-pointer"
             >
               Entendido

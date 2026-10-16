@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   ShieldCheck,
@@ -48,20 +48,35 @@ export function CheckoutModal({
   const deliveryMethod: DeliveryMethod = 'pickup';
   const paymentMethod: PaymentMethod = 'transfer';
 
+  // Always keep latest onClose reference without causing useEffect to re-run
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // Robust close handler: ALWAYS closes modal in React state immediately, then cleans history
+  const handleClose = () => {
+    onClose();
+    if (typeof window !== 'undefined' && window.history.state?.modal === 'checkout') {
+      window.history.back();
+    }
+  };
+
   // Back button (History API / popstate), Escape key, and body scroll lock
   useEffect(() => {
     if (!isOpen) return;
 
-    // Push state so pressing mobile back button closes modal rather than leaving page
-    window.history.pushState({ modal: 'checkout' }, '', '#reservar');
+    // Push state cleanly without changing pathname or hash so Next.js doesn't trigger route transitions
+    window.history.pushState({ modal: 'checkout' }, '');
 
     const handlePopState = () => {
-      onClose();
+      // User tapped hardware back button or swipe gesture on phone
+      onCloseRef.current();
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        handleSafeClose();
+        handleClose();
       }
     };
 
@@ -74,7 +89,7 @@ export function CheckoutModal({
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -83,15 +98,6 @@ export function CheckoutModal({
   const totalPrice = unitPrice * quantity;
   const depositAmount = unitDeposit * quantity;
   const remainingAmount = totalPrice - depositAmount;
-
-  // Safe close that cleans the history hash if active
-  const handleSafeClose = () => {
-    if (typeof window !== 'undefined' && window.location.hash === '#reservar') {
-      window.history.back();
-    } else {
-      onClose();
-    }
-  };
 
   const handleCopyAlias = () => {
     navigator.clipboard.writeText(STORE_CONFIG.bankInfo.alias);
@@ -153,8 +159,8 @@ export function CheckoutModal({
 
       setIsSubmitting(false);
 
-      // Clean history hash before showing success
-      if (typeof window !== 'undefined' && window.location.hash === '#reservar') {
+      // Clean history state before showing success
+      if (typeof window !== 'undefined' && window.history.state?.modal === 'checkout') {
         window.history.back();
       }
 
@@ -165,7 +171,7 @@ export function CheckoutModal({
   return (
     <div
       className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-200"
-      onClick={handleSafeClose}
+      onClick={handleClose}
       aria-modal="true"
       role="dialog"
     >
@@ -177,19 +183,20 @@ export function CheckoutModal({
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
-            <div>
+            <div className="pr-4">
               <h3 className="text-xl font-extrabold text-white">Completar Reserva de Preventa</h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 Asegurás tu tanda abonando la seña del 50%
               </p>
             </div>
+            {/* Generous touch target for close button (min 44x44px for mobile) */}
             <button
               type="button"
-              onClick={handleSafeClose}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
+              onClick={handleClose}
+              className="w-11 h-11 flex items-center justify-center -mr-2 -mt-2 text-slate-400 hover:text-white active:text-white rounded-xl bg-white/[0.04] hover:bg-white/[0.1] active:bg-white/[0.15] transition-colors cursor-pointer shrink-0"
               aria-label="Cerrar modal"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
           </div>
 
