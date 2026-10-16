@@ -50,7 +50,12 @@ export function getStoredCosts(): FinancialCosts {
       localStorage.setItem(COSTS_KEY, JSON.stringify(INITIAL_FINANCIAL_COSTS));
       return INITIAL_FINANCIAL_COSTS;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return {
+      ...INITIAL_FINANCIAL_COSTS,
+      ...parsed,
+      gatewayFeePercent: 0,
+    };
   } catch (e) {
     console.error('Error reading costs from localStorage', e);
     return INITIAL_FINANCIAL_COSTS;

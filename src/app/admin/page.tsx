@@ -31,6 +31,7 @@ import {
   Scissors,
   ArrowUpRight,
   ShieldAlert,
+  ShieldCheck,
   RotateCcw,
 } from 'lucide-react';
 import { INITIAL_ORDERS } from '@/data/mockData';
@@ -65,18 +66,20 @@ export default function AdminDashboardPage() {
     saveStoredCosts(updated);
   };
 
-  // Unit Economics calculations
+  // Active orders (excluding cancelled) for realistic production & revenue KPIs
+  const activeOrders = orders.filter((ord) => ord.status !== 'cancelled');
+
+  // Unit Economics calculations (0% gateway fee for bank transfers)
   const directCosts = costs.blankGarmentCost + costs.printingCost + costs.packagingCost;
-  const gatewayFeeAmount = (costs.salePrice * costs.gatewayFeePercent) / 100;
-  const totalUnitCost = directCosts + gatewayFeeAmount;
+  const totalUnitCost = directCosts; // Sin comisión de pasarela
   const currentUnitProfit = costs.salePrice - totalUnitCost;
   const currentMarginPercent =
     costs.salePrice > 0 ? (currentUnitProfit / costs.salePrice) * 100 : 0;
 
-  // Suggested price based on target margin formula: Suggested = DirectCost / (1 - (TargetMargin + Fee)/100)
-  const combinedPercent = (costs.targetMarginPercent + costs.gatewayFeePercent) / 100;
+  // Suggested price based on target margin formula: Suggested = DirectCost / (1 - TargetMargin/100)
+  const targetMarginDecimal = (costs.targetMarginPercent || 50) / 100;
   const suggestedPrice =
-    combinedPercent < 1 ? directCosts / (1 - combinedPercent) : directCosts * 2;
+    targetMarginDecimal < 1 ? directCosts / (1 - targetMarginDecimal) : directCosts * 2;
 
   // Filtered orders
   const filteredOrders = orders.filter((order) => {
@@ -90,17 +93,17 @@ export default function AdminDashboardPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Calculate high-level KPIs
-  const totalUnits = orders.reduce((sum, ord) => {
+  // Calculate high-level KPIs based on active orders
+  const totalUnits = activeOrders.reduce((sum, ord) => {
     return sum + ord.items.reduce((itemSum, item) => itemSum + item.quantity, 0);
   }, 0);
 
-  const totalDepositsCollected = orders
-    .filter((ord) => ord.status !== 'cancelled' && ord.status !== 'pending_deposit')
+  const totalDepositsCollected = activeOrders
+    .filter((ord) => ord.status !== 'pending_deposit')
     .reduce((sum, ord) => sum + ord.depositAmount, 0);
 
-  const pendingCollection = orders
-    .filter((ord) => ord.status !== 'cancelled' && ord.status !== 'completed')
+  const pendingCollection = activeOrders
+    .filter((ord) => ord.status !== 'completed')
     .reduce((sum, ord) => sum + ord.remainingAmount, 0);
 
   const projectedTotalProfit = currentUnitProfit * totalUnits;
@@ -428,21 +431,27 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1">Comisión Mercado Pago (%):</label>
+                <label className="text-slate-400 block mb-1">Precio de Venta al Público ($):</label>
                 <input
                   type="number"
-                  step="0.5"
-                  value={costs.gatewayFeePercent}
-                  onChange={(e) => handleCostChange('gatewayFeePercent', Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none"
+                  step="500"
+                  value={costs.salePrice}
+                  onChange={(e) => handleCostChange('salePrice', Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-emerald-500/30 text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none"
                 />
               </div>
+            </div>
+
+            {/* Zero Commission Notice */}
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/[0.07] border border-emerald-500/20 text-xs text-emerald-300">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span><strong>Comisión de pasarela: 0%</strong> (Cobro directo por transferencia a Naranja X &bull; Ahorrás ~$2.000 por remera frente a pasarelas tradicionales).</span>
             </div>
 
             {/* Target Margin Slider / Input */}
             <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-300 font-semibold">Margen de Ganancia Deseado:</span>
+                <span className="text-slate-300 font-semibold">Margen de Ganancia Objetivo:</span>
                 <span className="text-emerald-400 font-bold">{costs.targetMarginPercent}%</span>
               </div>
               <input
@@ -458,20 +467,99 @@ export default function AdminDashboardPage() {
             {/* Calculated Results Box */}
             <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-950/30 to-[#0e1117] border border-emerald-500/20 space-y-2 text-xs">
               <div className="flex justify-between text-slate-300">
-                <span>Costo Total Unitario (con comisión):</span>
+                <span>Costo Total de Fabricación por Prenda:</span>
                 <span className="font-bold text-white">{formatPrice(totalUnitCost)}</span>
               </div>
               <div className="flex justify-between text-slate-300">
-                <span>Precio de Venta Sugerido:</span>
+                <span>Precio Sugerido para margen de {costs.targetMarginPercent}%:</span>
                 <span className="font-black text-emerald-400 text-sm">{formatPrice(suggestedPrice)}</span>
               </div>
               <div className="flex justify-between text-slate-300 border-t border-white/[0.08] pt-2">
-                <span>Ganancia Neta por Prenda:</span>
-                <span className="font-bold text-emerald-300">{formatPrice(currentUnitProfit)}</span>
+                <span>Ganancia Neta por Prenda (al precio de {formatPrice(costs.salePrice)}):</span>
+                <span className="font-black text-emerald-300 text-sm">{formatPrice(currentUnitProfit)} ({currentMarginPercent.toFixed(1)}%)</span>
               </div>
               <div className="flex justify-between text-slate-300">
-                <span>Ganancia Proyectada ({totalUnits} prendas):</span>
-                <span className="font-black text-white text-sm">{formatPrice(projectedTotalProfit)}</span>
+                <span>Ganancia Proyectada en Tanda ({totalUnits} prendas activas):</span>
+                <span className="font-black text-white text-base">{formatPrice(projectedTotalProfit)}</span>
+              </div>
+            </div>
+
+            {/* Practical Example with Real Numbers */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-3 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">💡</span>
+                  <span className="font-bold text-white text-sm">Ejemplo Práctico con Números Reales</span>
+                </div>
+                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded font-semibold border border-emerald-500/20">
+                  Guía Paso a Paso
+                </span>
+              </div>
+
+              <p className="text-slate-300 leading-relaxed text-[11px]">
+                Así es exactamente cómo se calcula el negocio para la tanda de remeras:
+              </p>
+
+              {/* 3 cost pills */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
+                <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">1. Remera Lisa</span>
+                  <span className="font-mono font-bold text-white text-sm">$9.500</span>
+                  <span className="text-[10px] text-slate-500 block">Algodón peinado</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">2. Estampa Taller</span>
+                  <span className="font-mono font-bold text-white text-sm">$4.800</span>
+                  <span className="text-[10px] text-slate-500 block">Pecho, espalda y sponsors</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">3. Packaging</span>
+                  <span className="font-mono font-bold text-white text-sm">$1.200</span>
+                  <span className="text-[10px] text-slate-500 block">Bolsa + stickers</span>
+                </div>
+              </div>
+
+              {/* Total fabrication and sale */}
+              <div className="p-3 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/20 space-y-2 text-xs">
+                <div className="flex justify-between items-center text-slate-300">
+                  <span>Costo total de fabricación por remera:</span>
+                  <span className="font-mono text-white font-bold">$15.500</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span>Precio de venta al cliente en la web:</span>
+                  <span className="font-mono text-white font-bold">$32.000</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-emerald-500/20 text-emerald-300 font-bold">
+                  <span>👉 Tu ganancia limpia por remera:</span>
+                  <span className="font-mono text-base font-black">$16.500 (51.5% de ganancia)</span>
+                </div>
+              </div>
+
+              {/* Step by step flow explanation */}
+              <div className="space-y-2 text-[11px] text-slate-400 leading-relaxed pt-1">
+                <div className="flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold">①</span>
+                  <p>
+                    <strong className="text-slate-200">El cliente reserva y transfiere la seña (50% = $16.000):</strong> Con esa seña que entra a Naranja X ya tenés el dinero para pagarle al taller los $15.500 de la confección, y te quedan $500 de colchón. <em>¡No ponés un solo peso de tu bolsillo!</em>
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold">②</span>
+                  <p>
+                    <strong className="text-slate-200">El cliente retira la remera en el local y paga el saldo ($16.000):</strong> Esa segunda mitad que cobra el local es 100% tu ganancia líquida en mano.
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold">③</span>
+                  <div className="text-slate-300">
+                    <strong className="text-white block mb-0.5">Escala de ganancia según la tanda:</strong>
+                    <div className="space-y-0.5 text-slate-400">
+                      <div>&bull; Vendiendo <strong>10 remeras</strong> = <span className="text-emerald-400 font-semibold">$165.000 limpios</span>.</div>
+                      <div>&bull; Vendiendo <strong>20 remeras</strong> = <span className="text-emerald-400 font-semibold">$330.000 limpios</span>.</div>
+                      <div>&bull; Vendiendo <strong>50 remeras</strong> = <span className="text-emerald-400 font-semibold">$825.000 limpios</span>.</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

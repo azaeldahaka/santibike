@@ -91,8 +91,8 @@ export const INITIAL_FINANCIAL_COSTS: FinancialCosts = {
   blankGarmentCost: 9500,     // Remera lisa de algodón peinado 24/1 premium
   printingCost: 4800,         // DTF / Serigrafía premium frente, espalda, mangas
   packagingCost: 1200,        // Bolsa ecológica con cierre ziploc + stickers oficiales
-  gatewayFeePercent: 6.5,     // Comisión promedio Mercado Pago
-  targetMarginPercent: 48,    // Margen objetivo
+  gatewayFeePercent: 0,       // Cobro por transferencia bancaria directa (0% comisión)
+  targetMarginPercent: 50,    // Margen objetivo sugerido
   salePrice: 32000,
 };
 
