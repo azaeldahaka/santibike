@@ -24,6 +24,7 @@ interface CheckoutModalProps {
   selectedSize: ProductSize;
   quantity: number;
   onSuccess: (order: Order) => void;
+  currentPrice?: number;
 }
 
 export function CheckoutModal({
@@ -33,6 +34,7 @@ export function CheckoutModal({
   selectedSize,
   quantity,
   onSuccess,
+  currentPrice,
 }: CheckoutModalProps) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -93,7 +95,7 @@ export function CheckoutModal({
 
   if (!isOpen) return null;
 
-  const unitPrice = STORE_CONFIG.basePrice;
+  const unitPrice = currentPrice || STORE_CONFIG.basePrice;
   const unitDeposit = (unitPrice * STORE_CONFIG.depositPercentage) / 100;
   const totalPrice = unitPrice * quantity;
   const depositAmount = unitDeposit * quantity;

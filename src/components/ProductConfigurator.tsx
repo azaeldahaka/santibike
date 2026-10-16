@@ -24,6 +24,7 @@ interface ProductConfiguratorProps {
   onQuantityChange: (qty: number) => void;
   onOpenSizeGuide: () => void;
   onOpenCheckout: () => void;
+  currentPrice?: number;
 }
 
 export function ProductConfigurator({
@@ -35,10 +36,11 @@ export function ProductConfigurator({
   onQuantityChange,
   onOpenSizeGuide,
   onOpenCheckout,
+  currentPrice,
 }: ProductConfiguratorProps) {
   const SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
 
-  const unitPrice = STORE_CONFIG.basePrice;
+  const unitPrice = currentPrice || STORE_CONFIG.basePrice;
   const unitDeposit = (unitPrice * STORE_CONFIG.depositPercentage) / 100;
   const totalPrice = unitPrice * quantity;
   const totalDeposit = unitDeposit * quantity;

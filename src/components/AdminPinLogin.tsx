@@ -105,14 +105,11 @@ export function AdminPinLogin({ onSuccess }: AdminPinLoginProps) {
                   {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1 text-center">
-                PIN predeterminado: <span className="font-mono text-emerald-400 font-semibold">4720</span>
-              </p>
             </div>
 
             <div className="flex items-center gap-2 text-xs text-slate-400 pt-1">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Recordar sesión en este celular por 30 días</span>
+              <span>Recordar sesión en este dispositivo por 30 días</span>
             </div>
 
             <button

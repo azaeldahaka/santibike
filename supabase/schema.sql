@@ -26,6 +26,7 @@ create table if not exists public.orders (
 -- 2. TABLA DE COSTOS Y CONFIGURACIÓN COMERCIAL (store_settings)
 create table if not exists public.store_settings (
   id text primary key default 'default_settings',
+  admin_pin text not null default '4720',
   blank_garment_cost numeric not null default 9500,
   printing_cost numeric not null default 4800,
   packaging_cost numeric not null default 1200,
@@ -68,6 +69,7 @@ create policy "Allow public update on store_settings" on public.store_settings
 -- 5. INSERTAR CONFIGURACIÓN INICIAL (Si no existe)
 insert into public.store_settings (
   id,
+  admin_pin,
   blank_garment_cost,
   printing_cost,
   packaging_cost,
@@ -76,6 +78,7 @@ insert into public.store_settings (
   sale_price
 ) values (
   'default_settings',
+  '4720',
   9500,
   4800,
   1200,

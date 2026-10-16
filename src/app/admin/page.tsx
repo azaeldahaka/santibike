@@ -39,6 +39,7 @@ import {
   RotateCcw,
   LogOut,
   Database,
+  Key,
 } from 'lucide-react';
 import { INITIAL_ORDERS } from '@/data/mockData';
 
@@ -50,6 +51,13 @@ export default function AdminDashboardPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [copiedBatch, setCopiedBatch] = useState(false);
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+
+  // Change PIN modal state
+  const [isChangePinOpen, setIsChangePinOpen] = useState(false);
+  const [currentPinInput, setCurrentPinInput] = useState('');
+  const [newPinInput, setNewPinInput] = useState('');
+  const [pinChangeMsg, setPinChangeMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isChangingPin, setIsChangingPin] = useState(false);
 
   // Check existing session on load
   useEffect(() => {
@@ -87,6 +95,46 @@ export default function AdminDashboardPage() {
       localStorage.removeItem('santybike_admin_session');
     }
     setIsAuthenticated(false);
+  };
+
+  const handleChangePin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPinChangeMsg(null);
+    if (!currentPinInput.trim() || !newPinInput.trim()) {
+      setPinChangeMsg({ type: 'error', text: 'Por favor completá ambos campos.' });
+      return;
+    }
+    if (newPinInput.trim().length < 4) {
+      setPinChangeMsg({ type: 'error', text: 'El nuevo PIN debe tener al menos 4 números.' });
+      return;
+    }
+    setIsChangingPin(true);
+    try {
+      const res = await fetch('/api/admin/auth', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPin: currentPinInput.trim(),
+          newPin: newPinInput.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPinChangeMsg({ type: 'success', text: '¡PIN cambiado correctamente en la base de datos!' });
+        setCurrentPinInput('');
+        setNewPinInput('');
+        setTimeout(() => {
+          setIsChangePinOpen(false);
+          setPinChangeMsg(null);
+        }, 2200);
+      } else {
+        setPinChangeMsg({ type: 'error', text: data.message || 'Error al cambiar PIN.' });
+      }
+    } catch (err) {
+      setPinChangeMsg({ type: 'error', text: 'Error de red o conexión.' });
+    } finally {
+      setIsChangingPin(false);
+    }
   };
 
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
@@ -317,6 +365,20 @@ export default function AdminDashboardPage() {
             </Link>
 
             <button
+              onClick={() => {
+                setIsChangePinOpen(true);
+                setPinChangeMsg(null);
+                setCurrentPinInput('');
+                setNewPinInput('');
+              }}
+              className="px-3 py-1.5 sm:py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-xs sm:text-sm font-semibold text-slate-300 border border-white/[0.08] hover:border-emerald-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Cambiar PIN de seguridad del taller"
+            >
+              <Key className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Cambiar PIN</span>
+            </button>
+
+            <button
               onClick={handleLogout}
               className="px-3 py-1.5 sm:py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-xs sm:text-sm font-semibold text-red-400 border border-red-500/30 flex items-center gap-1.5 transition-colors"
               title="Cerrar sesión de administrador"
@@ -494,9 +556,12 @@ export default function AdminDashboardPage() {
                 <label className="text-slate-400 block mb-1">Prenda base lisa ($):</label>
                 <input
                   type="number"
-                  value={costs.blankGarmentCost}
-                  onChange={(e) => handleCostChange('blankGarmentCost', Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none"
+                  placeholder="0"
+                  value={costs.blankGarmentCost || ''}
+                  onChange={(e) =>
+                    handleCostChange('blankGarmentCost', e.target.value === '' ? 0 : Number(e.target.value))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none placeholder-slate-600 font-mono"
                 />
               </div>
 
@@ -504,9 +569,12 @@ export default function AdminDashboardPage() {
                 <label className="text-slate-400 block mb-1">Estampado frente/dorso ($):</label>
                 <input
                   type="number"
-                  value={costs.printingCost}
-                  onChange={(e) => handleCostChange('printingCost', Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none"
+                  placeholder="0"
+                  value={costs.printingCost || ''}
+                  onChange={(e) =>
+                    handleCostChange('printingCost', e.target.value === '' ? 0 : Number(e.target.value))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none placeholder-slate-600 font-mono"
                 />
               </div>
 
@@ -514,9 +582,12 @@ export default function AdminDashboardPage() {
                 <label className="text-slate-400 block mb-1">Packaging y etiquetas ($):</label>
                 <input
                   type="number"
-                  value={costs.packagingCost}
-                  onChange={(e) => handleCostChange('packagingCost', Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none"
+                  placeholder="0"
+                  value={costs.packagingCost || ''}
+                  onChange={(e) =>
+                    handleCostChange('packagingCost', e.target.value === '' ? 0 : Number(e.target.value))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none placeholder-slate-600 font-mono"
                 />
               </div>
 
@@ -525,11 +596,20 @@ export default function AdminDashboardPage() {
                 <input
                   type="number"
                   step="500"
-                  value={costs.salePrice}
-                  onChange={(e) => handleCostChange('salePrice', Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-emerald-500/30 text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none"
+                  placeholder="0"
+                  value={costs.salePrice || ''}
+                  onChange={(e) =>
+                    handleCostChange('salePrice', e.target.value === '' ? 0 : Number(e.target.value))
+                  }
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-emerald-500/30 text-emerald-400 font-bold focus:border-emerald-500 focus:outline-none placeholder-slate-600 font-mono"
                 />
               </div>
+            </div>
+
+            {/* Price change notice */}
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] text-[11px] text-slate-400">
+              <span className="text-emerald-400 font-bold">✓</span>
+              <span>Al modificar el <strong>Precio de Venta</strong>, se actualiza automáticamente el valor de la remera y de la seña en la tienda de los clientes.</span>
             </div>
 
             {/* Zero Commission Notice */}
@@ -558,53 +638,53 @@ export default function AdminDashboardPage() {
             <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-950/30 to-[#0e1117] border border-emerald-500/20 space-y-2 text-xs">
               <div className="flex justify-between text-slate-300">
                 <span>Costo Total de Fabricación por Prenda:</span>
-                <span className="font-bold text-white">{formatPrice(totalUnitCost)}</span>
+                <span className="font-bold text-white font-mono">{formatPrice(totalUnitCost)}</span>
               </div>
               <div className="flex justify-between text-slate-300">
                 <span>Precio Sugerido para margen de {costs.targetMarginPercent}%:</span>
-                <span className="font-black text-emerald-400 text-sm">{formatPrice(suggestedPrice)}</span>
+                <span className="font-black text-emerald-400 text-sm font-mono">{formatPrice(suggestedPrice)}</span>
               </div>
               <div className="flex justify-between text-slate-300 border-t border-white/[0.08] pt-2">
                 <span>Ganancia Neta por Prenda (al precio de {formatPrice(costs.salePrice)}):</span>
-                <span className="font-black text-emerald-300 text-sm">{formatPrice(currentUnitProfit)} ({currentMarginPercent.toFixed(1)}%)</span>
+                <span className="font-black text-emerald-300 text-sm font-mono">{formatPrice(currentUnitProfit)} ({currentMarginPercent.toFixed(1)}%)</span>
               </div>
               <div className="flex justify-between text-slate-300">
                 <span>Ganancia Proyectada en Tanda ({totalUnits} prendas activas):</span>
-                <span className="font-black text-white text-base">{formatPrice(projectedTotalProfit)}</span>
+                <span className="font-black text-white text-base font-mono">{formatPrice(projectedTotalProfit)}</span>
               </div>
             </div>
 
-            {/* Practical Example with Real Numbers */}
+            {/* Practical Example with Real Numbers - 100% Dynamic */}
             <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-3 text-xs">
               <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
                 <div className="flex items-center gap-2">
                   <span className="text-base">💡</span>
-                  <span className="font-bold text-white text-sm">Ejemplo Práctico con Números Reales</span>
+                  <span className="font-bold text-white text-sm">Ejemplo en Tiempo Real con tus Números</span>
                 </div>
                 <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded font-semibold border border-emerald-500/20">
-                  Guía Paso a Paso
+                  Cálculo Automático
                 </span>
               </div>
 
               <p className="text-slate-300 leading-relaxed text-[11px]">
-                Así es exactamente cómo se calcula el negocio para la tanda de remeras:
+                Con los costos y el precio de venta ingresados arriba, así rinde cada remera en la tanda:
               </p>
 
               {/* 3 cost pills */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
                 <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                   <span className="text-[10px] text-slate-400 uppercase tracking-wider block">1. Remera Lisa</span>
-                  <span className="font-mono font-bold text-white text-sm">$9.500</span>
+                  <span className="font-mono font-bold text-white text-sm">{formatPrice(costs.blankGarmentCost)}</span>
                   <span className="text-[10px] text-slate-500 block">Algodón peinado</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                   <span className="text-[10px] text-slate-400 uppercase tracking-wider block">2. Estampa Taller</span>
-                  <span className="font-mono font-bold text-white text-sm">$4.800</span>
-                  <span className="text-[10px] text-slate-500 block">Pecho, espalda y sponsors</span>
+                  <span className="font-mono font-bold text-white text-sm">{formatPrice(costs.printingCost)}</span>
+                  <span className="text-[10px] text-slate-500 block">Pecho, espalda y logos</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                   <span className="text-[10px] text-slate-400 uppercase tracking-wider block">3. Packaging</span>
-                  <span className="font-mono font-bold text-white text-sm">$1.200</span>
+                  <span className="font-mono font-bold text-white text-sm">{formatPrice(costs.packagingCost)}</span>
                   <span className="text-[10px] text-slate-500 block">Bolsa + stickers</span>
                 </div>
               </div>
@@ -612,16 +692,16 @@ export default function AdminDashboardPage() {
               {/* Total fabrication and sale */}
               <div className="p-3 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/20 space-y-2 text-xs">
                 <div className="flex justify-between items-center text-slate-300">
-                  <span>Costo total de fabricación por remera:</span>
-                  <span className="font-mono text-white font-bold">$15.500</span>
+                  <span>Costo total de confección por remera (Taller):</span>
+                  <span className="font-mono text-white font-bold">{formatPrice(totalUnitCost)}</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-300">
                   <span>Precio de venta al cliente en la web:</span>
-                  <span className="font-mono text-white font-bold">$32.000</span>
+                  <span className="font-mono text-white font-bold">{formatPrice(costs.salePrice)}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-emerald-500/20 text-emerald-300 font-bold">
                   <span>👉 Tu ganancia limpia por remera:</span>
-                  <span className="font-mono text-base font-black">$16.500 (51.5% de ganancia)</span>
+                  <span className="font-mono text-base font-black">{formatPrice(currentUnitProfit)} ({currentMarginPercent.toFixed(1)}% de margen)</span>
                 </div>
               </div>
 
@@ -630,23 +710,23 @@ export default function AdminDashboardPage() {
                 <div className="flex items-start gap-2">
                   <span className="text-emerald-400 font-bold">①</span>
                   <p>
-                    <strong className="text-slate-200">El cliente reserva y transfiere la seña (50% = $16.000):</strong> Con esa seña que entra a Naranja X ya tenés el dinero para pagarle al taller los $15.500 de la confección, y te quedan $500 de colchón. <em>¡No ponés un solo peso de tu bolsillo!</em>
+                    <strong className="text-slate-200">El cliente reserva y paga la seña del 50% ({formatPrice(costs.salePrice * 0.5)}):</strong> Con ese dinero que entra a Naranja X cubrís los {formatPrice(totalUnitCost)} del taller{costs.salePrice * 0.5 >= totalUnitCost ? ` y te quedan ${formatPrice((costs.salePrice * 0.5) - totalUnitCost)} a favor de entrada` : ''}. <em>¡No ponés plata de tu bolsillo para arrancar la confección!</em>
                   </p>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-emerald-400 font-bold">②</span>
                   <p>
-                    <strong className="text-slate-200">El cliente retira la remera en el local y paga el saldo ($16.000):</strong> Esa segunda mitad que cobra el local es 100% tu ganancia líquida en mano.
+                    <strong className="text-slate-200">El cliente retira la remera en el taller y paga el saldo ({formatPrice(costs.salePrice * 0.5)}):</strong> Ese cobro restante es tu ganancia neta en mano.
                   </p>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-emerald-400 font-bold">③</span>
                   <div className="text-slate-300">
-                    <strong className="text-white block mb-0.5">Escala de ganancia según la tanda:</strong>
+                    <strong className="text-white block mb-0.5">Escala de ganancia proyectada según la tanda:</strong>
                     <div className="space-y-0.5 text-slate-400">
-                      <div>&bull; Vendiendo <strong>10 remeras</strong> = <span className="text-emerald-400 font-semibold">$165.000 limpios</span>.</div>
-                      <div>&bull; Vendiendo <strong>20 remeras</strong> = <span className="text-emerald-400 font-semibold">$330.000 limpios</span>.</div>
-                      <div>&bull; Vendiendo <strong>50 remeras</strong> = <span className="text-emerald-400 font-semibold">$825.000 limpios</span>.</div>
+                      <div>&bull; Vendiendo <strong>10 remeras</strong> = <span className="text-emerald-400 font-semibold">{formatPrice(currentUnitProfit * 10)} limpios</span>.</div>
+                      <div>&bull; Vendiendo <strong>20 remeras</strong> = <span className="text-emerald-400 font-semibold">{formatPrice(currentUnitProfit * 20)} limpios</span>.</div>
+                      <div>&bull; Vendiendo <strong>50 remeras</strong> = <span className="text-emerald-400 font-semibold">{formatPrice(currentUnitProfit * 50)} limpios</span>.</div>
                     </div>
                   </div>
                 </div>
@@ -813,6 +893,94 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Change PIN Modal */}
+      {isChangePinOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-sm bg-[#11141a] border border-white/[0.1] rounded-2xl p-6 shadow-2xl relative space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Cambiar PIN del Panel</h3>
+                  <p className="text-[11px] text-slate-400">Seguridad del taller SantyBike</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsChangePinOpen(false)}
+                className="text-slate-400 hover:text-white p-1 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {pinChangeMsg && (
+              <div
+                className={`p-3 rounded-xl text-xs font-semibold ${
+                  pinChangeMsg.type === 'success'
+                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                    : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                }`}
+              >
+                {pinChangeMsg.text}
+              </div>
+            )}
+
+            <form onSubmit={handleChangePin} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  PIN Actual:
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={8}
+                  placeholder="••••"
+                  value={currentPinInput}
+                  onChange={(e) => setCurrentPinInput(e.target.value)}
+                  required
+                  className="w-full tracking-widest text-center text-lg font-mono font-bold py-2.5 px-3 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Nuevo PIN (mínimo 4 dígitos):
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={8}
+                  placeholder="••••"
+                  value={newPinInput}
+                  onChange={(e) => setNewPinInput(e.target.value)}
+                  required
+                  className="w-full tracking-widest text-center text-lg font-mono font-bold py-2.5 px-3 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsChangePinOpen(false)}
+                  className="w-1/2 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 font-semibold text-xs border border-white/[0.08] transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isChangingPin}
+                  className="w-1/2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {isChangingPin ? 'Guardando...' : 'Guardar PIN'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

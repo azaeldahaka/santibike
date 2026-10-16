@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Hero } from '@/components/Hero';
 import { ProductGallery } from '@/components/ProductGallery';
@@ -11,7 +11,7 @@ import { OrderSuccessModal } from '@/components/OrderSuccessModal';
 import { MobileStickyBar } from '@/components/MobileStickyBar';
 import { Footer } from '@/components/Footer';
 import { Order, ProductColor, ProductSize } from '@/types';
-import { addOrder } from '@/lib/storage';
+import { addOrder, getStoredCosts, fetchLiveCosts } from '@/lib/storage';
 import {
   CreditCard,
   PackageCheck,
@@ -31,12 +31,26 @@ export default function StorefrontPage() {
   const [selectedColor, setSelectedColor] = useState<ProductColor>('negro');
   const [selectedSize, setSelectedSize] = useState<ProductSize>('L');
   const [quantity, setQuantity] = useState(1);
+  const [currentPrice, setCurrentPrice] = useState<number>(STORE_CONFIG.basePrice);
 
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
 
   const productSectionRef = useRef<HTMLDivElement>(null);
+
+  // Sync live price from Supabase / localStorage so changes in /admin reflect immediately for customers
+  useEffect(() => {
+    const cached = getStoredCosts();
+    if (cached?.salePrice) {
+      setCurrentPrice(cached.salePrice);
+    }
+    fetchLiveCosts().then((live) => {
+      if (live?.salePrice) {
+        setCurrentPrice(live.salePrice);
+      }
+    });
+  }, []);
 
   const handleScrollToProduct = () => {
     productSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -79,6 +93,7 @@ export default function StorefrontPage() {
                 onQuantityChange={setQuantity}
                 onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
                 onOpenCheckout={() => setIsCheckoutOpen(true)}
+                currentPrice={currentPrice}
               />
             </div>
           </div>
@@ -220,6 +235,7 @@ export default function StorefrontPage() {
         selectedSize={selectedSize}
         quantity={quantity}
         onSuccess={handleOrderSuccess}
+        currentPrice={currentPrice}
       />
 
       <OrderSuccessModal
@@ -233,6 +249,7 @@ export default function StorefrontPage() {
         selectedSize={selectedSize}
         quantity={quantity}
         onOpenCheckout={() => setIsCheckoutOpen(true)}
+        currentPrice={currentPrice}
       />
 
       <Footer />

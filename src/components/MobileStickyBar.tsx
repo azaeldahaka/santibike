@@ -11,6 +11,7 @@ interface MobileStickyBarProps {
   selectedSize: ProductSize;
   quantity: number;
   onOpenCheckout: () => void;
+  currentPrice?: number;
 }
 
 export function MobileStickyBar({
@@ -18,8 +19,9 @@ export function MobileStickyBar({
   selectedSize,
   quantity,
   onOpenCheckout,
+  currentPrice,
 }: MobileStickyBarProps) {
-  const unitPrice = STORE_CONFIG.basePrice;
+  const unitPrice = currentPrice || STORE_CONFIG.basePrice;
   const unitDeposit = (unitPrice * STORE_CONFIG.depositPercentage) / 100;
   const totalDeposit = unitDeposit * quantity;
 
