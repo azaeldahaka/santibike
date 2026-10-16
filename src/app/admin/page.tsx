@@ -11,7 +11,11 @@ import {
   getStoredCosts,
   saveStoredCosts,
   formatPrice,
+  fetchLiveOrders,
+  fetchLiveCosts,
 } from '@/lib/storage';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { AdminPinLogin } from '@/components/AdminPinLogin';
 import {
   DollarSign,
   Package,
@@ -33,20 +37,57 @@ import {
   ShieldAlert,
   ShieldCheck,
   RotateCcw,
+  LogOut,
+  Database,
 } from 'lucide-react';
 import { INITIAL_ORDERS } from '@/data/mockData';
 
 export default function AdminDashboardPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [costs, setCosts] = useState<FinancialCosts>(getStoredCosts());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [copiedBatch, setCopiedBatch] = useState(false);
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
+  // Check existing session on load
   useEffect(() => {
-    setOrders(getStoredOrders());
-    setCosts(getStoredCosts());
+    const hasCookie = typeof document !== 'undefined' && document.cookie.includes('santybike_admin_session=authenticated_santy_owner');
+    const hasLocal = typeof window !== 'undefined' && localStorage.getItem('santybike_admin_session') === 'authenticated_santy_owner';
+    setIsAuthenticated(hasCookie || hasLocal);
   }, []);
+
+  // Fetch live orders and costs when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      setOrders(getStoredOrders());
+      setCosts(getStoredCosts());
+
+      if (isSupabaseConfigured) {
+        setIsCloudSyncing(true);
+        fetchLiveOrders().then((liveOrders) => {
+          setOrders(liveOrders);
+          setIsCloudSyncing(false);
+        });
+        fetchLiveCosts().then((liveCosts) => {
+          setCosts(liveCosts);
+        });
+      }
+    }
+  }, [isAuthenticated]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/auth', { method: 'DELETE' });
+    } catch (e) {
+      // safe fallback
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('santybike_admin_session');
+    }
+    setIsAuthenticated(false);
+  };
 
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
     const updated = updateOrderStatus(orderId, newStatus);
@@ -195,6 +236,28 @@ export default function AdminDashboardPage() {
     }
   };
 
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#090a0d] text-slate-100">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-slate-400">Verificando acceso al panel...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#090a0d] text-slate-100">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center px-4 py-8">
+          <AdminPinLogin onSuccess={() => setIsAuthenticated(true)} />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#090a0d] text-slate-100">
       <Navbar />
@@ -217,23 +280,50 @@ export default function AdminDashboardPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Cloud Sync Status Badge */}
+            {isCloudSyncing ? (
+              <span className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 animate-pulse">
+                <Database className="w-3.5 h-3.5" />
+                <span>Sincronizando...</span>
+              </span>
+            ) : isSupabaseConfigured ? (
+              <span className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold flex items-center gap-1.5" title="Conectado a la base de datos Supabase en la nube">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Supabase Conectado</span>
+              </span>
+            ) : (
+              <span className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold flex items-center gap-1.5" title="Operando en almacenamiento local">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span>Modo Local</span>
+              </span>
+            )}
+
             <button
               onClick={handleResetData}
               className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-slate-300 border border-white/[0.08] flex items-center gap-1.5 transition-colors"
               title="Restablecer órdenes iniciales"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Restablecer Demo</span>
+              <span className="hidden sm:inline">Restablecer</span> Demo
             </button>
 
             <Link
               href="/"
-              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs sm:text-sm font-bold text-white shadow-md shadow-emerald-600/30 flex items-center gap-2 transition-all hover:scale-[1.02]"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs sm:text-sm font-bold text-white shadow-md shadow-emerald-600/30 flex items-center gap-1.5 transition-all hover:scale-[1.02]"
             >
               <Store className="w-4 h-4" />
-              <span>Ver Tienda en Vivo</span>
+              <span>Tienda</span>
             </Link>
+
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 sm:py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-xs sm:text-sm font-semibold text-red-400 border border-red-500/30 flex items-center gap-1.5 transition-colors"
+              title="Cerrar sesión de administrador"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Cerrar Sesión</span>
+            </button>
           </div>
         </div>
 

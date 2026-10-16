@@ -49,7 +49,7 @@ export function Navbar() {
           {isAdmin ? (
             <Link
               href="/"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 transition-all hover:scale-[1.02]"
+              className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 transition-all hover:scale-[1.02]"
             >
               <Store className="w-4 h-4" />
               <span>Ver Tienda</span>
@@ -57,13 +57,11 @@ export function Navbar() {
           ) : (
             <Link
               href="/admin"
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 border border-white/[0.1] hover:border-emerald-500/40 transition-all hover:scale-[1.02]"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-emerald-500/30 transition-all"
+              title="Acceso exclusivo para administración y taller"
             >
-              <LayoutDashboard className="w-4 h-4 text-emerald-400" />
-              <span>Panel Dueño</span>
-              <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-bold">
-                Admin
-              </span>
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Acceso Taller</span>
             </Link>
           )}
         </div>
