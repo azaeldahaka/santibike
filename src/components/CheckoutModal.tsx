@@ -25,6 +25,7 @@ interface CheckoutModalProps {
   quantity: number;
   onSuccess: (order: Order) => void;
   currentPrice?: number;
+  onOpenPolicy?: () => void;
 }
 
 export function CheckoutModal({
@@ -35,6 +36,7 @@ export function CheckoutModal({
   quantity,
   onSuccess,
   currentPrice,
+  onOpenPolicy,
 }: CheckoutModalProps) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -396,6 +398,34 @@ export function CheckoutModal({
                 <span>Saldo a abonar al retirar (50%):</span>
                 <span className="tabular-nums">{formatPrice(remainingAmount)}</span>
               </div>
+            </div>
+
+            {/* Cancellation & Pickup Policy Summary */}
+            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.07] text-xs text-slate-400 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-200 text-[11px] uppercase tracking-wider">
+                  Política de Preventa y Retiro
+                </span>
+                {onOpenPolicy && (
+                  <button
+                    type="button"
+                    onClick={onOpenPolicy}
+                    className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 text-[11px] font-semibold transition-colors cursor-pointer"
+                  >
+                    Ver detalles
+                  </button>
+                )}
+              </div>
+              <ul className="text-[11px] text-slate-400 space-y-1 leading-relaxed">
+                <li className="flex items-start gap-1.5">
+                  <span className="text-emerald-400 font-bold">•</span>
+                  <span><strong>Cancelación con preventa abierta:</strong> Reintegro del 100% por transferencia bancaria.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-amber-400 font-bold">•</span>
+                  <span><strong>Plazo de retiro:</strong> 7 días corridos desde el aviso por WhatsApp para retirar en local y abonar el saldo.</span>
+                </li>
+              </ul>
             </div>
 
             {/* Submit Button */}

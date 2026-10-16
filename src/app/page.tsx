@@ -8,6 +8,7 @@ import { ProductConfigurator } from '@/components/ProductConfigurator';
 import { SizeGuideModal } from '@/components/SizeGuideModal';
 import { CheckoutModal } from '@/components/CheckoutModal';
 import { OrderSuccessModal } from '@/components/OrderSuccessModal';
+import { CancellationPolicyModal } from '@/components/CancellationPolicyModal';
 import { MobileStickyBar } from '@/components/MobileStickyBar';
 import { Footer } from '@/components/Footer';
 import { Order, ProductColor, ProductSize } from '@/types';
@@ -35,6 +36,7 @@ export default function StorefrontPage() {
 
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isPolicyOpen, setIsPolicyOpen] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
 
   const productSectionRef = useRef<HTMLDivElement>(null);
@@ -236,6 +238,12 @@ export default function StorefrontPage() {
         quantity={quantity}
         onSuccess={handleOrderSuccess}
         currentPrice={currentPrice}
+        onOpenPolicy={() => setIsPolicyOpen(true)}
+      />
+
+      <CancellationPolicyModal
+        isOpen={isPolicyOpen}
+        onClose={() => setIsPolicyOpen(false)}
       />
 
       <OrderSuccessModal
@@ -252,7 +260,7 @@ export default function StorefrontPage() {
         currentPrice={currentPrice}
       />
 
-      <Footer />
+      <Footer onOpenPolicy={() => setIsPolicyOpen(true)} />
     </div>
   );
 }

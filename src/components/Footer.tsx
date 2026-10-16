@@ -1,9 +1,13 @@
 import React from 'react';
 import Link from 'next/link';
-import { Bike, ShieldCheck, Heart, MapPin, Clock, Phone } from 'lucide-react';
+import { Bike, ShieldCheck, Heart, MapPin, Clock, Phone, RotateCcw } from 'lucide-react';
 import { STORE_CONFIG } from '@/data/mockData';
 
-export function Footer() {
+interface FooterProps {
+  onOpenPolicy?: () => void;
+}
+
+export function Footer({ onOpenPolicy }: FooterProps = {}) {
   return (
     <footer className="border-t border-white/[0.08] bg-[#07080a] text-slate-400 text-xs py-12 pb-24 md:pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -72,10 +76,20 @@ export function Footer() {
             <p className="text-slate-400 text-xs leading-relaxed">
               Al reservar con el 50% de seña asegurás tu prenda en la tanda de producción oficial sin riesgo de quedarte sin talle.
             </p>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-col gap-2">
+              {onOpenPolicy && (
+                <button
+                  type="button"
+                  onClick={onOpenPolicy}
+                  className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 underline underline-offset-2 text-left cursor-pointer transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                  <span>Política de Cancelaciones y Retiros (7 días)</span>
+                </button>
+              )}
               <Link
                 href="/admin"
-                className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-300 underline underline-offset-2"
               >
                 Acceso al Panel Administrativo
               </Link>
@@ -84,7 +98,18 @@ export function Footer() {
         </div>
 
         <div className="pt-8 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
-          <p>© 2026 SantyBike Bicycles. Todos los derechos reservados.</p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <p>© 2026 SantyBike Bicycles. Todos los derechos reservados.</p>
+            {onOpenPolicy && (
+              <button
+                type="button"
+                onClick={onOpenPolicy}
+                className="text-slate-400 hover:text-emerald-400 underline underline-offset-2 transition-colors cursor-pointer"
+              >
+                Política de Cancelaciones
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-1 text-slate-400">
             <span>Desarrollado con dedicación para SantyBike</span>
             <Heart className="w-3.5 h-3.5 text-red-500 fill-current" />
