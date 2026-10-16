@@ -50,12 +50,12 @@ export function ProductConfigurator({
       <div>
         <div className="flex items-center gap-2 mb-2">
           <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
-            Merchandising Oficial San Ibike
+            Merchandising Oficial SantyBike
           </span>
           <span className="text-xs font-semibold text-slate-400">Edición Limitada 2026</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
-          Remera Técnica / Urbana San Ibike
+          Remera Técnica / Urbana SantyBike
         </h2>
         <p className="mt-2 text-sm text-slate-300 leading-relaxed">
           Prenda técnica de corte regular con el logo frontal oficial y los sponsors del equipo en el dorso. Confeccionada con algodón peinado premium para rodar en bici o vestir con estilo urbano.
@@ -208,7 +208,7 @@ export function ProductConfigurator({
         <div className="flex items-start gap-2 pt-2 text-[11px] text-slate-400 border-t border-white/[0.06]">
           <Clock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
           <span>
-            Preventa abierta hasta el <strong>{STORE_CONFIG.preorderEndDateFormatted}</strong>. Entrega estimada en 10-15 días hábiles post-cierre en bicicletería San Ibike.
+            Preventa abierta hasta el <strong>{STORE_CONFIG.preorderEndDateFormatted}</strong>. Entrega estimada en 10-15 días hábiles post-cierre en Bicicletería SantyBike.
           </span>
         </div>
       </div>

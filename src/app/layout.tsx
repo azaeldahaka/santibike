@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://santibike.vercel.app"),
-  title: "San Ibike Merch | Preventa Oficial Remera Técnica Edición Limitada",
-  description: "Preventa exclusiva del merchandising oficial de San Ibike Bicycles. Asegurá tu remera con el 50% de seña y saldo contra entrega.",
-  keywords: ["San Ibike", "Bicicletería", "Remera Ciclismo", "Preventa", "Merchandising Oficial", "SantyBike"],
+  title: "SantyBike Merch | Preventa Oficial Remera Técnica Edición Limitada",
+  description: "Preventa exclusiva del merchandising oficial de Bicicletería SantyBike. Asegurá tu remera con el 50% de seña y saldo contra entrega.",
+  keywords: ["SantyBike", "Bicicletería SantyBike", "Remera Ciclismo", "Preventa", "Merchandising Oficial", "Salta"],
   openGraph: {
-    title: "San Ibike Merch | Preventa Oficial Remera Técnica",
-    description: "Asegurá tu remera técnica edición limitada de San Ibike con un 50% de seña.",
+    title: "SantyBike Merch | Preventa Oficial Remera Técnica",
+    description: "Asegurá tu remera técnica edición limitada de SantyBike con un 50% de seña.",
     images: [{ url: "/images/products/remera-negra-frente.jpg" }],
   },
 };

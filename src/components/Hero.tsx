@@ -25,7 +25,7 @@ export function Hero({ onScrollToProduct }: HeroProps) {
         <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight uppercase leading-[1.1]">
           Remera Oficial <br />
           <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
-            San Ibike Bicycles
+            SantyBike Bicycles
           </span>
         </h1>
 

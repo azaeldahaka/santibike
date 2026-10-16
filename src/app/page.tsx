@@ -92,7 +92,7 @@ export default function StorefrontPage() {
                 Transparencia Total
               </span>
               <h3 className="text-2xl sm:text-4xl font-black text-white mt-3 uppercase tracking-tight">
-                ¿Cómo funciona la Preventa de San Ibike?
+                ¿Cómo funciona la Preventa de SantyBike?
               </h3>
               <p className="text-sm text-slate-400 mt-2">
                 Un modelo justo y transparente: asegurás tu talle sin sobrecostos de producción ni riesgo de stock.

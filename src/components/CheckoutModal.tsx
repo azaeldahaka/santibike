@@ -136,7 +136,7 @@ export function CheckoutModal({
         <div className="mt-5 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between text-xs">
           <div>
             <p className="font-bold text-white text-sm">
-              {quantity}x Remera Técnica San Ibike
+              {quantity}x Remera Técnica SantyBike
             </p>
             <p className="text-slate-400 mt-0.5">
               Color: <span className="text-slate-200 font-semibold">{selectedColor === 'negro' ? 'Negro Obsidiana' : 'Gris Melange'}</span> &bull; Talle: <span className="text-emerald-400 font-bold">{selectedSize}</span>

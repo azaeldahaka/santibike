@@ -21,7 +21,7 @@ export function Navbar() {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-lg tracking-wider text-white uppercase">
-                SAN IBIKE
+                SANTYBIKE
               </span>
               <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 Oficial
@@ -35,7 +35,7 @@ export function Navbar() {
         <div className="flex items-center gap-2 sm:gap-4">
           <a
             href={`https://wa.me/${STORE_CONFIG.phoneWhatsApp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-              '¡Hola San Ibike! Tengo una consulta sobre la preventa de remeras oficiales.'
+              '¡Hola SantyBike! Tengo una consulta sobre la preventa de remeras oficiales.'
             )}`}
             target="_blank"
             rel="noopener noreferrer"

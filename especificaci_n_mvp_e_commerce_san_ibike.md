@@ -1,9 +1,9 @@
-# Especificación Técnica y de Producto: MVP E-commerce San Ibike Merch
+# Especificación Técnica y de Producto: MVP E-commerce SantyBike Merch
 
 ## 1. Visión General del Proyecto
-Desarrollar una aplicación web de comercio electrónico **Mobile-First** orientada a la venta y preventa (modelo con seña previa) del merchandising oficial de la bicicletería **San Ibike**. 
+Desarrollar una aplicación web de comercio electrónico **Mobile-First** orientada a la venta y preventa (modelo con seña previa) del merchandising oficial de la bicicletería **SantyBike**. 
 
-El sistema debe permitir a los clientes reservar prendas (inicialmente la remera oficial técnica/urbana de San Ibike), abonar una seña porcentual o fija para asegurar la producción sin riesgo de stock ocioso, y proporcionarle al dueño un panel administrativo (Dashboard) para gestionar pedidos, costos de producción, márgenes de ganancia y fijación de precios recomendados.
+El sistema debe permitir a los clientes reservar prendas (inicialmente la remera oficial técnica/urbana de SantyBike), abonar una seña porcentual o fija para asegurar la producción sin riesgo de stock ocioso, y proporcionarle al dueño un panel administrativo (Dashboard) para gestionar pedidos, costos de producción, márgenes de ganancia y fijación de precios recomendados.
 
 ---
 
@@ -38,11 +38,11 @@ El sistema debe permitir a los clientes reservar prendas (inicialmente la remera
 ### 4.2. Estructura de la Landing / Catálogo
 1. **Hero Section:**
    * Imagen de impacto con modelos vistiendo la remera (frente y dorso en entorno ciclista).
-   * Titular: *"Remera Oficial San Ibike - Edición Limitada"*.
+   * Titular: *"Remera Oficial SantyBike - Edición Limitada"*.
    * Tag de estado: Badge *"Preventa Abierta - 50% de Seña"*.
    * Botón directo: *"Reservar Ahora"*.
 2. **Galería de Producto interactiva:**
-   * Foto 1: Frente completo (logo San Ibike en pecho).
+   * Foto 1: Frente completo (logo SantyBike en pecho).
    * Foto 2: Espalda completa (logos de sponsors: SRAM, SARS, AWA, WKNS).
    * Foto 3: Detalle de mangas (bandera argentina, parches Shimano/Sega).
    * Foto 4: Foto de uso real en modelo.
@@ -66,7 +66,7 @@ El sistema debe permitir a los clientes reservar prendas (inicialmente la remera
    * **Opción B:** Transferencia Bancaria Directa (muestra Alias, CBU y botón para subir foto de comprobante o enviarlo por WhatsApp).
 7. **Pantalla de Éxito / Confirmación:**
    * Resumen del pedido con `ID de Reserva`.
-   * Botón directo: *"Enviar confirmación por WhatsApp a San Ibike"*.
+   * Botón directo: *"Enviar confirmación por WhatsApp a SantyBike"*.
 
 ---
 

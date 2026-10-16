@@ -128,7 +128,7 @@ export default function AdminDashboardPage() {
 
   // Copy production batch summary to clipboard
   const handleCopyProduction = () => {
-    const text = `📋 *PEDIDO DE PRODUCCIÓN - TANDA SAN IBIKE*
+    const text = `📋 *PEDIDO DE PRODUCCIÓN - TANDA SANTYBIKE*
 ----------------------------------------
 👕 *REMERAS NEGRAS (Total: ${totalNegro}):*
 - S: ${productionCount.negro.S}
@@ -543,7 +543,7 @@ export default function AdminDashboardPage() {
                   filteredOrders.map((order) => {
                     const item = order.items[0];
                     const cleanPhone = order.customerPhone.replace(/[^0-9]/g, '');
-                    const waNotifyText = `¡Hola ${order.customerName}! Te contactamos de San Ibike por tu reserva ${order.orderCode}. ¡Tu remera ya está lista para retirar en el local!`;
+                    const waNotifyText = `¡Hola ${order.customerName}! Te contactamos de SantyBike por tu reserva ${order.orderCode}. ¡Tu remera ya está lista para retirar en el local!`;
 
                     return (
                       <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">

@@ -52,18 +52,18 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
   const colorName = item.color === 'negro' ? 'Negro Obsidiana' : 'Gris Melange';
 
   // Build formatted WhatsApp message
-  const whatsappText = `¡Hola San Ibike! 🚴‍♂️ Acabo de realizar la reserva de mi remera oficial en la web.
+  const whatsappText = `¡Hola SantyBike! 🚴‍♂️ Acabo de realizar la reserva de mi remera oficial en la web.
 
 📌 *Código de Reserva:* ${order.orderCode}
 👤 *Nombre:* ${order.customerName}
 📱 *WhatsApp:* ${order.customerPhone}
-👕 *Prenda:* ${item.quantity}x Remera Oficial San Ibike
+👕 *Prenda:* ${item.quantity}x Remera Oficial SantyBike
 🎨 *Color:* ${colorName}
 📏 *Talle:* ${item.size}
 💳 *Método de Pago:* ${order.paymentMethod === 'mercadopago' ? 'Mercado Pago' : 'Transferencia Bancaria'}
 💰 *Seña Pagada:* ${formatPrice(order.depositAmount)}
 💵 *Saldo a Pagar al Retirar:* ${formatPrice(order.remainingAmount)}
-📍 *Entrega:* ${order.deliveryMethod === 'pickup' ? 'Retiro en Local San Ibike' : 'Envío a coordinar'}
+📍 *Entrega:* ${order.deliveryMethod === 'pickup' ? 'Retiro en Local SantyBike' : 'Envío a coordinar'}
 
 ¡Quedo a la espera de la confirmación! Gracias.`;
 
@@ -132,7 +132,7 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
           <div className="flex justify-between text-slate-300">
             <span>Prenda:</span>
             <span className="font-semibold text-white">
-              {item.quantity}x Remera Oficial San Ibike
+              {item.quantity}x Remera Oficial SantyBike
             </span>
           </div>
           <div className="flex justify-between text-slate-300">
@@ -191,7 +191,7 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
             className="w-full py-3.5 px-4 rounded-xl font-bold text-sm bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 flex items-center justify-center gap-2 shadow-lg shadow-[#25D366]/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
           >
             <MessageCircle className="w-4 h-4 fill-current" />
-            <span>Enviar Reserva por WhatsApp a San Ibike</span>
+            <span>Enviar Reserva por WhatsApp a SantyBike</span>
           </a>
 
           <button

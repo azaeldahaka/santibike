@@ -1,6 +1,6 @@
-# 🚴‍♂️ San Ibike Merch — E-commerce & Preventa Oficial (MVP)
+# 🚴‍♂️ SantyBike Merch — E-commerce & Preventa Oficial (MVP)
 
-Plataforma de comercio electrónico **Mobile-First** diseñada para la venta y preventa con seña previa del merchandising oficial de la bicicletería **San Ibike Bicycles**.
+Plataforma de comercio electrónico **Mobile-First** diseñada para la venta y preventa con seña previa del merchandising oficial de la bicicletería **SantyBike Bicycles**.
 
 ---
 

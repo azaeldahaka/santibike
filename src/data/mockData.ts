@@ -2,7 +2,7 @@ import { FinancialCosts, Order, ProductImage, SizeMeasurement } from '@/types';
 
 export const STORE_CONFIG = {
   storeName: 'Bicicletería SantyBike',
-  tagline: 'San Ibike Bicycles & Merch Oficial',
+  tagline: 'SantyBike Bicycles & Merch Oficial',
   phoneWhatsApp: '+5493870000000',
   phoneWhatsAppDisplay: '+54 9 387 000-0000',
   instagram: '@santibike.oficial',
@@ -36,28 +36,28 @@ export const PRODUCT_IMAGES: ProductImage[] = [
   {
     id: 'negro-frente',
     url: '/images/products/remera-negra-frente.jpg',
-    alt: 'Remera Oficial San Ibike Negra - Vista Frontal',
-    title: 'Frente - Logo San Ibike',
+    alt: 'Remera Oficial SantyBike Negra - Vista Frontal',
+    title: 'Frente - Logo SantyBike',
     color: 'negro',
   },
   {
     id: 'negro-espalda',
     url: '/images/products/remera-negra-espalda.jpg',
-    alt: 'Remera Oficial San Ibike Negra - Vista Dorsal Sponsors',
+    alt: 'Remera Oficial SantyBike Negra - Vista Dorsal Sponsors',
     title: 'Espalda - Sponsors Oficiales',
     color: 'negro',
   },
   {
     id: 'gris-frente',
     url: '/images/products/remera-gris-frente.jpg',
-    alt: 'Remera Oficial San Ibike Gris Melange - Vista Frontal',
+    alt: 'Remera Oficial SantyBike Gris Melange - Vista Frontal',
     title: 'Frente - Gris Melange',
     color: 'gris',
   },
   {
     id: 'gris-espalda',
     url: '/images/products/remera-gris-espalda.jpg',
-    alt: 'Remera Oficial San Ibike Gris Melange - Vista Dorsal',
+    alt: 'Remera Oficial SantyBike Gris Melange - Vista Dorsal',
     title: 'Espalda - Gris Melange',
     color: 'gris',
   },
@@ -78,7 +78,7 @@ export const PRODUCT_IMAGES: ProductImage[] = [
   {
     id: 'detalle-ciclista',
     url: '/images/details/logo-ciclista-macro.jpg',
-    alt: 'Detalle Macro Emblema Ciclista San Ibike',
+    alt: 'Detalle Macro Emblema Ciclista SantyBike',
     title: 'Detalle Emblema Ciclista',
   },
   {

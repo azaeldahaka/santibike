@@ -15,7 +15,7 @@ export function Footer() {
                 <Bike className="w-5 h-5" />
               </div>
               <span className="font-extrabold text-base tracking-wider text-white uppercase">
-                San Ibike
+                SantyBike
               </span>
             </div>
             <p className="text-slate-400 text-xs leading-relaxed">
@@ -80,9 +80,9 @@ export function Footer() {
         </div>
 
         <div className="pt-8 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
-          <p>© 2026 San Ibike Bicycles. Todos los derechos reservados.</p>
+          <p>© 2026 SantyBike Bicycles. Todos los derechos reservados.</p>
           <div className="flex items-center gap-1 text-slate-400">
-            <span>Desarrollado con dedicación para San Ibike</span>
+            <span>Desarrollado con dedicación para SantyBike</span>
             <Heart className="w-3.5 h-3.5 text-red-500 fill-current" />
           </div>
         </div>
