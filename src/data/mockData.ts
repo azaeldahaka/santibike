@@ -3,8 +3,8 @@ import { FinancialCosts, Order, ProductImage, SizeMeasurement } from '@/types';
 export const STORE_CONFIG = {
   storeName: 'Bicicletería SantyBike',
   tagline: 'SantyBike Bicycles & Merch Oficial',
-  phoneWhatsApp: '+5493870000000',
-  phoneWhatsAppDisplay: '+54 9 387 000-0000',
+  phoneWhatsApp: '+5493876048120',
+  phoneWhatsAppDisplay: '+54 9 387 604-8120',
   address: 'B° Limache, Salta Capital, Salta',
   mapsUrl: 'https://maps.app.goo.gl/eTQtYkXa4bK9x4jLA',
   mapsEmbedUrl: 'https://maps.google.com/maps?q=-24.8523147,-65.4334491&z=17&output=embed',

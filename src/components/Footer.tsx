@@ -50,10 +50,17 @@ export function Footer() {
           {/* Col 3: Contact & Social */}
           <div className="space-y-2">
             <h4 className="font-bold text-white text-xs uppercase tracking-wider">Contacto Directo</h4>
-            <div className="flex items-center gap-2 text-slate-400">
+            <a
+              href={`https://wa.me/${STORE_CONFIG.phoneWhatsApp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                '¡Hola SantyBike! Tengo una consulta sobre la preventa de remeras oficiales.'
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-slate-300 hover:text-emerald-400 transition-colors"
+            >
               <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>{STORE_CONFIG.phoneWhatsAppDisplay}</span>
-            </div>
+              <span className="font-medium">{STORE_CONFIG.phoneWhatsAppDisplay}</span>
+            </a>
             <p className="text-[11px] text-slate-400 leading-relaxed">
               Atención personalizada y recepción de comprobantes de transferencia vía WhatsApp.
             </p>
