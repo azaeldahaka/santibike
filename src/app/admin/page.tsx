@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { DevDataToggle } from '@/components/DevDataToggle';
 import { Order, OrderStatus, FinancialCosts, ProductColor, ProductSize, CampaignDates } from '@/types';
@@ -61,6 +62,7 @@ import {
 import { INITIAL_ORDERS } from '@/data/mockData';
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [costs, setCosts] = useState<FinancialCosts>(getStoredCosts());
@@ -259,7 +261,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setIsLoggingOut(true);
     // 1. Immediately wipe client credentials so state cannot re-authenticate
     if (typeof window !== 'undefined') {
@@ -272,18 +274,18 @@ export default function AdminDashboardPage() {
       }
     }
 
-    // 2. Wipe server cookie
+    // 2. Wipe server cookie in background (non-blocking)
     try {
-      await fetch('/api/admin/auth', { method: 'DELETE' });
+      fetch('/api/admin/auth', { method: 'DELETE' });
     } catch (e) {
       // safe fallback
     }
 
-    setIsAuthenticated(false);
-
-    // 3. Clean redirect to storefront home
+    // 3. Navigate directly to storefront without flashing the PIN modal
     if (typeof window !== 'undefined') {
-      window.location.href = '/';
+      window.location.replace('/');
+    } else {
+      router.replace('/');
     }
   };
 
@@ -523,6 +525,17 @@ export default function AdminDashboardPage() {
         );
     }
   };
+
+  if (isLoggingOut) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#090a0d] text-slate-100">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-slate-400">Cerrando sesión...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isAuthenticated === null) {
     return (
