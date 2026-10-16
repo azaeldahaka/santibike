@@ -216,7 +216,7 @@ export function CheckoutModal({
               <span className="text-[10px] uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-bold">
                 Seña 50%
               </span>
-              <p className="font-mono font-bold text-white text-sm mt-1">
+              <p className="font-mono font-bold text-white text-sm mt-1 tabular-nums">
                 {formatPrice(depositAmount)}
               </p>
             </div>
@@ -242,6 +242,7 @@ export function CheckoutModal({
                   placeholder="Nombre y Apellido *"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
+                  maxLength={100}
                   required
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.1] focus:border-emerald-500 focus:outline-none text-sm text-white placeholder-slate-500 transition-colors"
                 />
@@ -254,6 +255,7 @@ export function CheckoutModal({
                     placeholder="WhatsApp con código de área *"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
+                    maxLength={25}
                     required
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.1] focus:border-emerald-500 focus:outline-none text-sm text-white placeholder-slate-500 transition-colors"
                   />
@@ -265,6 +267,7 @@ export function CheckoutModal({
                     placeholder="Email (opcional)"
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
+                    maxLength={100}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.1] focus:border-emerald-500 focus:outline-none text-sm text-white placeholder-slate-500 transition-colors"
                   />
                 </div>
@@ -276,6 +279,7 @@ export function CheckoutModal({
                   placeholder="Barrio / Localidad (ej. Limache, Salta Capital...)"
                   value={customerCity}
                   onChange={(e) => setCustomerCity(e.target.value)}
+                  maxLength={100}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.1] focus:border-emerald-500 focus:outline-none text-sm text-white placeholder-slate-500 transition-colors"
                 />
               </div>
@@ -382,15 +386,15 @@ export function CheckoutModal({
             <div className="pt-3 border-t border-white/[0.08] space-y-1.5 text-xs">
               <div className="flex items-center justify-between text-slate-400">
                 <span>Total de la prenda:</span>
-                <span>{formatPrice(totalPrice)}</span>
+                <span className="tabular-nums">{formatPrice(totalPrice)}</span>
               </div>
               <div className="flex items-center justify-between font-bold text-sm text-emerald-400">
                 <span>Seña a pagar hoy (50%):</span>
-                <span className="text-base font-black">{formatPrice(depositAmount)}</span>
+                <span className="text-base font-black tabular-nums">{formatPrice(depositAmount)}</span>
               </div>
               <div className="flex items-center justify-between text-slate-400">
                 <span>Saldo a abonar al retirar (50%):</span>
-                <span>{formatPrice(remainingAmount)}</span>
+                <span className="tabular-nums">{formatPrice(remainingAmount)}</span>
               </div>
             </div>
 

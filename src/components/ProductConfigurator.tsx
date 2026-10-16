@@ -147,24 +147,34 @@ export function ProductConfigurator({
       </div>
 
       {/* Quantity Selector */}
-      <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Cantidad:</span>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
-            disabled={quantity <= 1}
-            className="w-8 h-8 rounded-lg bg-white/[0.08] hover:bg-white/[0.15] disabled:opacity-30 disabled:pointer-events-none text-white font-bold text-base flex items-center justify-center transition-colors"
-          >
-            -
-          </button>
-          <span className="text-base font-black text-white w-6 text-center">{quantity}</span>
-          <button
-            onClick={() => onQuantityChange(quantity + 1)}
-            className="w-8 h-8 rounded-lg bg-white/[0.08] hover:bg-white/[0.15] text-white font-bold text-base flex items-center justify-center transition-colors"
-          >
-            +
-          </button>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Cantidad:</span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
+              disabled={quantity <= 1}
+              className="w-8 h-8 rounded-lg bg-white/[0.08] hover:bg-white/[0.15] disabled:opacity-30 disabled:pointer-events-none text-white font-bold text-base flex items-center justify-center transition-colors cursor-pointer"
+            >
+              -
+            </button>
+            <span className="text-base font-black text-white w-6 text-center tabular-nums">{quantity}</span>
+            <button
+              type="button"
+              onClick={() => onQuantityChange(Math.min(10, quantity + 1))}
+              disabled={quantity >= 10}
+              className="w-8 h-8 rounded-lg bg-white/[0.08] hover:bg-white/[0.15] disabled:opacity-30 disabled:pointer-events-none text-white font-bold text-base flex items-center justify-center transition-colors cursor-pointer"
+            >
+              +
+            </button>
+          </div>
         </div>
+        {quantity >= 10 && (
+          <p className="text-[11px] text-emerald-400 pl-1">
+            Máximo 10 prendas por reserva web. Para compras mayoristas de equipos o clubes, consultanos por WhatsApp.
+          </p>
+        )}
       </div>
 
       {/* Preorder Financial Breakdown Card (The 50% Deposit Model) */}
@@ -185,7 +195,7 @@ export function ProductConfigurator({
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between text-slate-400">
             <span>Precio Total de la prenda:</span>
-            <span className="font-semibold text-slate-200">{formatPrice(totalPrice)}</span>
+            <span className="font-semibold text-slate-200 tabular-nums">{formatPrice(totalPrice)}</span>
           </div>
 
           <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
@@ -195,14 +205,14 @@ export function ProductConfigurator({
               </p>
               <p className="text-[11px] text-slate-400">Asegura la confección de tu prenda</p>
             </div>
-            <span className="text-xl sm:text-2xl font-black text-emerald-400">
+            <span className="text-xl sm:text-2xl font-black text-emerald-400 tabular-nums">
               {formatPrice(totalDeposit)}
             </span>
           </div>
 
           <div className="flex items-center justify-between text-slate-400 pt-1">
             <span>Saldo restante a pagar al retirar:</span>
-            <span className="font-semibold text-slate-300">{formatPrice(remainingTotal)}</span>
+            <span className="font-semibold text-slate-300 tabular-nums">{formatPrice(remainingTotal)}</span>
           </div>
         </div>
 
@@ -218,10 +228,12 @@ export function ProductConfigurator({
       {/* Main CTA */}
       <button
         onClick={onOpenCheckout}
-        className="w-full py-4 px-6 rounded-xl font-black text-base uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+        className="w-full py-4 px-6 rounded-xl font-black text-sm sm:text-base uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
       >
-        <span>Reservar con Seña ({formatPrice(totalDeposit)})</span>
-        <ArrowRight className="w-5 h-5" />
+        <span className="[overflow-wrap:anywhere]">
+          Reservar con Seña (<span className="tabular-nums">{formatPrice(totalDeposit)}</span>)
+        </span>
+        <ArrowRight className="w-5 h-5 shrink-0" />
       </button>
 
       {/* Quality specs and badges */}

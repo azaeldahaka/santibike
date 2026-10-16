@@ -90,18 +90,27 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
     setTimeout(() => setCopiedAlias(false), 2000);
   };
 
-  const item = order.items[0];
-  const colorName = item.color === 'negro' ? 'Negro Obsidiana' : 'Gris Melange';
+  const items = order.items && order.items.length > 0 ? order.items : [];
+  const firstName = order.customerName?.trim().split(/\s+/)[0] || 'Cliente';
 
   // Build formatted WhatsApp message with receipt prompt
+  const itemsText = items.length > 0
+    ? items
+        .map(
+          (it) =>
+            `👕 *Prenda:* ${it.quantity}x Remera Oficial SantyBike\n🎨 *Color:* ${
+              it.color === 'negro' ? 'Negro Obsidiana' : 'Gris Melange'
+            }\n📏 *Talle:* ${it.size}`
+        )
+        .join('\n\n')
+    : '👕 *Prenda:* Remera Oficial SantyBike';
+
   const whatsappText = `¡Hola SantyBike! 🚴‍♂️ Acabo de realizar la reserva de mi remera oficial en la web.
 
 📌 *Código de Reserva:* ${order.orderCode}
-👤 *Nombre:* ${order.customerName}
-📱 *WhatsApp:* ${order.customerPhone}
-👕 *Prenda:* ${item.quantity}x Remera Oficial SantyBike
-🎨 *Color:* ${colorName}
-📏 *Talle:* ${item.size}
+👤 *Nombre:* ${order.customerName?.trim() || 'Cliente'}
+📱 *WhatsApp:* ${order.customerPhone || ''}
+${itemsText}
 💳 *Pago:* Transferencia Bancaria (Naranja X)
 💰 *Seña Pagada:* ${formatPrice(order.depositAmount)}
 💵 *Saldo al Retirar:* ${formatPrice(order.remainingAmount)}
@@ -150,7 +159,7 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
             </span>
 
             <h3 className="text-2xl font-black text-white mt-3">
-              ¡Gracias, {order.customerName.split(' ')[0]}!
+              ¡Gracias, {firstName}!
             </h3>
             <p className="text-xs text-slate-300 mt-1 max-w-sm mx-auto">
               Tu prenda está pre-reservada en la tanda oficial de SantyBike.
@@ -228,21 +237,31 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
 
           {/* Order Details Breakdown */}
           <div className="mt-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2 text-xs">
-            <div className="flex justify-between text-slate-300">
-              <span>Prenda:</span>
-              <span className="font-semibold text-white">
-                {item.quantity}x Remera Oficial SantyBike
-              </span>
-            </div>
-            <div className="flex justify-between text-slate-300">
-              <span>Color y Talle:</span>
-              <span className="font-semibold text-white">
-                {colorName} &bull; Talle <span className="text-emerald-400">{item.size}</span>
-              </span>
-            </div>
-            <div className="flex justify-between text-slate-300">
+            {items.length === 0 ? (
+              <p className="text-slate-400 italic">No hay prendas especificadas en este pedido.</p>
+            ) : (
+              items.map((it, idx) => (
+                <div
+                  key={idx}
+                  className="flex justify-between items-center text-slate-300 pb-2 border-b border-white/[0.04] last:border-0 last:pb-0"
+                >
+                  <div>
+                    <span className="font-semibold text-white">
+                      {it.quantity}x Remera Oficial SantyBike
+                    </span>
+                    <p className="text-[11px] text-slate-400">
+                      Color: {it.color === 'negro' ? 'Negro Obsidiana' : 'Gris Melange'}
+                    </p>
+                  </div>
+                  <span className="font-bold text-emerald-400 font-mono">
+                    Talle {it.size}
+                  </span>
+                </div>
+              ))
+            )}
+            <div className="flex justify-between text-slate-300 pt-1.5 border-t border-white/[0.04]">
               <span>Saldo a abonar al retirar:</span>
-              <span className="font-semibold text-white">
+              <span className="font-semibold text-white tabular-nums">
                 {formatPrice(order.remainingAmount)}
               </span>
             </div>

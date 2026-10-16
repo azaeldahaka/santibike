@@ -31,7 +31,7 @@ export function MobileStickyBar({
         <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
           Seña hoy ({selectedSize} &bull; {selectedColor === 'negro' ? 'Negro' : 'Gris'}):
         </p>
-        <p className="text-lg font-black text-emerald-400 leading-none mt-0.5">
+        <p className="text-lg font-black text-emerald-400 leading-none mt-0.5 tabular-nums">
           {formatPrice(totalDeposit)}
         </p>
         <p className="text-[9px] text-slate-500">Saldo restante al retirar</p>
@@ -42,7 +42,7 @@ export function MobileStickyBar({
         className="py-3 px-5 rounded-xl font-black text-xs uppercase tracking-wider bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/20 flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
       >
         <span>Reservar</span>
-        <ArrowRight className="w-4 h-4" />
+        <ArrowRight className="w-4 h-4 shrink-0" />
       </button>
     </div>
   );

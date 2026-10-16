@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
+import { DevDataToggle } from '@/components/DevDataToggle';
 import { Order, OrderStatus, FinancialCosts, ProductColor, ProductSize } from '@/types';
 import {
   getStoredOrders,
@@ -47,6 +48,9 @@ import {
   Save,
   AlertCircle,
   Lightbulb,
+  Settings,
+  ChevronDown,
+  RefreshCw,
 } from 'lucide-react';
 import { INITIAL_ORDERS } from '@/data/mockData';
 
@@ -57,8 +61,27 @@ export default function AdminDashboardPage() {
   const [simCosts, setSimCosts] = useState<FinancialCosts>(getStoredCosts());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 20;
   const [copiedBatch, setCopiedBatch] = useState(false);
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+
+  // Listen for dev fixture changes
+  useEffect(() => {
+    const handleFixtureChange = () => {
+      setOrders(getStoredOrders());
+      setCurrentPage(1);
+    };
+    window.addEventListener('santybike_fixture_change', handleFixtureChange);
+    return () => {
+      window.removeEventListener('santybike_fixture_change', handleFixtureChange);
+    };
+  }, []);
+
+  // Reset page when search or status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const [activeTab, setActiveTab] = useState<'orders' | 'calculator'>('orders');
 
@@ -83,6 +106,25 @@ export default function AdminDashboardPage() {
   const [newPinInput, setNewPinInput] = useState('');
   const [pinChangeMsg, setPinChangeMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isChangingPin, setIsChangingPin] = useState(false);
+
+  // Settings dropdown state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  // Close settings dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setIsSettingsOpen(false);
+      }
+    };
+    if (isSettingsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSettingsOpen]);
 
   // Check existing session on load
   useEffect(() => {
@@ -297,27 +339,31 @@ export default function AdminDashboardPage() {
   // Filtered orders
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.orderCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerPhone.includes(searchTerm);
+      (order.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.orderCode || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.customerPhone || '').includes(searchTerm);
 
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
 
+  // Pagination calculation
+  const totalPages = Math.ceil(filteredOrders.length / pageSize) || 1;
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   // Calculate high-level KPIs based on active orders
   const totalUnits = activeOrders.reduce((sum, ord) => {
-    return sum + ord.items.reduce((itemSum, item) => itemSum + item.quantity, 0);
+    return sum + (ord.items || []).reduce((itemSum, item) => itemSum + item.quantity, 0);
   }, 0);
 
   const totalDepositsCollected = activeOrders
     .filter((ord) => ord.status !== 'pending_deposit')
-    .reduce((sum, ord) => sum + ord.depositAmount, 0);
+    .reduce((sum, ord) => sum + (ord.depositAmount || 0), 0);
 
   const pendingCollection = activeOrders
     .filter((ord) => ord.status !== 'completed')
-    .reduce((sum, ord) => sum + ord.remainingAmount, 0);
+    .reduce((sum, ord) => sum + (ord.remainingAmount || 0), 0);
 
   const projectedTotalProfit = currentUnitProfit * totalUnits;
   const simProjectedProfit = simUnitProfit * totalUnits;
@@ -332,8 +378,8 @@ export default function AdminDashboardPage() {
   orders
     .filter((ord) => ord.status !== 'cancelled')
     .forEach((ord) => {
-      ord.items.forEach((item) => {
-        if (productionCount[item.color] && productionCount[item.color][item.size] !== undefined) {
+      (ord.items || []).forEach((item) => {
+        if (item && productionCount[item.color] && productionCount[item.color][item.size] !== undefined) {
           productionCount[item.color][item.size] += item.quantity;
         }
       });
@@ -345,6 +391,7 @@ export default function AdminDashboardPage() {
 
   // Copy production batch summary to clipboard
   const handleCopyProduction = () => {
+    const prendasPlural = grandTotalProduction === 1 ? 'prenda' : 'prendas';
     const text = `📋 *PEDIDO DE PRODUCCIÓN - TANDA SANTYBIKE*
 ----------------------------------------
 👕 *REMERAS NEGRAS (Total: ${totalNegro}):*
@@ -361,7 +408,7 @@ export default function AdminDashboardPage() {
 - XL: ${productionCount.gris.XL}
 - XXL: ${productionCount.gris.XXL}
 
-🔥 *GRAN TOTAL A PRODUCIR: ${grandTotalProduction} prendas*`;
+🔥 *GRAN TOTAL A PRODUCIR: ${grandTotalProduction} ${prendasPlural}*`;
 
     navigator.clipboard.writeText(text);
     setCopiedBatch(true);
@@ -453,61 +500,134 @@ export default function AdminDashboardPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Supabase Diagnostic Button */}
+          <div className="flex items-center gap-2.5">
+            {/* Supabase Status Pill - Fixed Width & Zero Layout Shift */}
             <button
               onClick={runDiagnostic}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all hover:scale-[1.02] cursor-pointer ${
+              className="h-9 px-3 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-emerald-500/40 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer select-none"
+              title={
                 isCloudSyncing
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 animate-pulse'
+                  ? 'Sincronizando con Supabase...'
                   : isSupabaseConfigured
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:border-emerald-500/40'
-                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-              }`}
-              title="Hacé clic para verificar el estado de la base de datos Supabase"
+                  ? 'Base de datos Supabase conectada en vivo. Clic para diagnóstico.'
+                  : 'Modo local activo (sin nube). Clic para diagnóstico.'
+              }
             >
-              <Database className="w-3.5 h-3.5" />
-              <span>{isCloudSyncing ? 'Sincronizando...' : isSupabaseConfigured ? '🟢 Supabase Conectado' : '🟠 Modo Local'}</span>
-              <Activity className="w-3 h-3 text-slate-400 ml-0.5" />
+              <div className="relative flex items-center justify-center w-2.5 h-2.5 shrink-0">
+                {isCloudSyncing ? (
+                  <>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                  </>
+                ) : isSupabaseConfigured ? (
+                  <span className="inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+                ) : (
+                  <span className="inline-flex rounded-full h-2 w-2 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
+                )}
+              </div>
+              <Database className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+              <span className="text-slate-200 font-medium">Supabase</span>
+              {isCloudSyncing && (
+                <RefreshCw className="w-3 h-3 text-emerald-400 animate-spin shrink-0 ml-0.5" />
+              )}
             </button>
 
-            <button
-              onClick={handleResetData}
-              className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-slate-300 border border-white/[0.08] flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Restablecer órdenes iniciales"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Restablecer</span> Demo
-            </button>
+            {/* Settings & Tools Dropdown */}
+            <div className="relative" ref={settingsRef}>
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className={`h-9 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none ${
+                  isSettingsOpen
+                    ? 'bg-white/[0.1] text-white border-emerald-500/50 ring-1 ring-emerald-500/30'
+                    : 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border-white/[0.08] hover:border-white/20'
+                }`}
+                title="Herramientas y configuración del taller"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                <span>Ajustes</span>
+                <ChevronDown
+                  className={`w-3 h-3 text-slate-400 transition-transform duration-200 shrink-0 ${
+                    isSettingsOpen ? 'rotate-180 text-emerald-400' : ''
+                  }`}
+                />
+              </button>
 
-            <Link
-              href="/"
-              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs sm:text-sm font-bold text-white shadow-md shadow-emerald-600/30 flex items-center gap-1.5 transition-all hover:scale-[1.02]"
-            >
-              <Store className="w-4 h-4" />
-              <span>Tienda</span>
-            </Link>
+              {/* Dropdown Menu */}
+              {isSettingsOpen && (
+                <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#11141a]/95 backdrop-blur-xl border border-white/[0.1] shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-3 py-2 border-b border-white/[0.06] mb-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Opciones del Taller
+                    </p>
+                  </div>
 
-            <button
-              onClick={() => {
-                setIsChangePinOpen(true);
-                setPinChangeMsg(null);
-                setCurrentPinInput('');
-                setNewPinInput('');
-              }}
-              className="px-3 py-1.5 sm:py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-xs sm:text-sm font-semibold text-slate-300 border border-white/[0.08] hover:border-emerald-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Cambiar PIN de seguridad del taller"
-            >
-              <Key className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Cambiar PIN</span>
-            </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSettingsOpen(false);
+                      setIsChangePinOpen(true);
+                      setPinChangeMsg(null);
+                      setCurrentPinInput('');
+                      setNewPinInput('');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-200 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer text-left"
+                  >
+                    <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                      <Key className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="font-semibold block">Cambiar PIN</span>
+                      <span className="text-[10px] text-slate-400 block">Seguridad de acceso al panel</span>
+                    </div>
+                  </button>
 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSettingsOpen(false);
+                      runDiagnostic();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-200 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer text-left"
+                  >
+                    <div className="w-6 h-6 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                      <Activity className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="font-semibold block">Diagnóstico de Nube</span>
+                      <span className="text-[10px] text-slate-400 block">Verificar tablas de Supabase</span>
+                    </div>
+                  </button>
+
+                  <div className="my-1 border-t border-white/[0.06]" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSettingsOpen(false);
+                      handleResetData();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 transition-colors cursor-pointer text-left"
+                  >
+                    <div className="w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <span className="font-semibold block">Restablecer Demo</span>
+                      <span className="text-[10px] text-amber-400/70 block">Recargar órdenes iniciales</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="px-3 py-1.5 sm:py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-xs sm:text-sm font-semibold text-red-400 border border-red-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="h-9 px-3 sm:px-3.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-xs font-semibold text-red-400 border border-red-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Cerrar sesión de administrador"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden sm:inline">Cerrar Sesión</span>
             </button>
           </div>
@@ -552,9 +672,9 @@ export default function AdminDashboardPage() {
                   <span className="text-xs font-bold uppercase tracking-wider">Prendas Reservadas</span>
                   <Package className="w-4 h-4 text-emerald-400" />
                 </div>
-                <p className="text-2xl sm:text-3xl font-black text-white">{totalUnits} un.</p>
+                <p className="text-2xl sm:text-3xl font-black text-white tabular-nums">{totalUnits} un.</p>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  {orders.length} pedidos registrados
+                  {orders.length} {orders.length === 1 ? 'pedido registrado' : 'pedidos registrados'}
                 </p>
               </div>
 
@@ -563,7 +683,7 @@ export default function AdminDashboardPage() {
                   <span className="text-xs font-bold uppercase tracking-wider">Señas Recaudadas</span>
                   <DollarSign className="w-4 h-4 text-emerald-400" />
                 </div>
-                <p className="text-2xl sm:text-3xl font-black text-emerald-400">
+                <p className="text-2xl sm:text-3xl font-black text-emerald-400 tabular-nums">
                   {formatPrice(totalDepositsCollected)}
                 </p>
                 <p className="text-[11px] text-slate-400 mt-1">
@@ -576,7 +696,7 @@ export default function AdminDashboardPage() {
                   <span className="text-xs font-bold uppercase tracking-wider">Saldo por Cobrar</span>
                   <Clock className="w-4 h-4 text-amber-400" />
                 </div>
-                <p className="text-2xl sm:text-3xl font-black text-amber-300">
+                <p className="text-2xl sm:text-3xl font-black text-amber-300 tabular-nums">
                   {formatPrice(pendingCollection)}
                 </p>
                 <p className="text-[11px] text-slate-400 mt-1">
@@ -589,7 +709,7 @@ export default function AdminDashboardPage() {
                   <span className="text-xs font-bold uppercase tracking-wider">Ganancia Proyectada</span>
                   <TrendingUp className="w-4 h-4 text-emerald-400" />
                 </div>
-                <p className="text-2xl sm:text-3xl font-black text-white">
+                <p className="text-2xl sm:text-3xl font-black text-white tabular-nums">
                   {formatPrice(projectedTotalProfit)}
                 </p>
                 <p className="text-[11px] text-emerald-400 font-semibold mt-1">
@@ -839,34 +959,68 @@ export default function AdminDashboardPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((order) => {
-                    const item = order.items[0];
-                    const cleanPhone = order.customerPhone.replace(/[^0-9]/g, '');
-                    const waNotifyText = `¡Hola ${order.customerName}! Te contactamos de SantyBike por tu reserva ${order.orderCode}. ¡Tu remera ya está lista para retirar en el local!`;
+                  paginatedOrders.map((order) => {
+                    const items = order.items && order.items.length > 0 ? order.items : [];
+                    const cleanPhone = (order.customerPhone || '').replace(/[^0-9]/g, '');
+                    const itemsSummary = items.length > 0
+                      ? items.map((it) => `${it.quantity}x ${it.color === 'negro' ? 'Negro' : 'Gris'} (${it.size})`).join(', ')
+                      : 'remera';
+                    const waNotifyText = `¡Hola ${order.customerName?.trim() || 'cliente'}! Te contactamos de SantyBike por tu reserva ${order.orderCode} (${itemsSummary}). ¡Tu pedido ya está listo para retirar en el local!`;
 
                     return (
                       <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">
                         {/* Code */}
-                        <td className="py-3.5 px-3 font-mono font-bold text-emerald-400">
+                        <td className="py-3.5 px-3 font-mono font-bold text-emerald-400 text-xs whitespace-nowrap">
                           {order.orderCode}
                         </td>
 
-                        {/* Customer */}
-                        <td className="py-3.5 px-3">
-                          <p className="font-bold text-white">{order.customerName}</p>
-                          <p className="text-[11px] text-slate-400">{order.customerPhone}</p>
+                        {/* Customer - Wrap applied */}
+                        <td className="py-3.5 px-3 min-w-[140px] max-w-[220px]">
+                          <p className="font-bold text-white [overflow-wrap:anywhere] leading-snug">
+                            {order.customerName || <span className="text-slate-500 italic">Sin nombre</span>}
+                          </p>
+                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                            {order.customerPhone || <span className="text-slate-600 italic">Sin teléfono</span>}
+                          </p>
+                          {order.customerEmail && (
+                            <p className="text-[10px] text-slate-500 [overflow-wrap:anywhere] mt-0.5">
+                              {order.customerEmail}
+                            </p>
+                          )}
+                          {order.customerCity && (
+                            <p className="text-[10px] text-slate-500 [overflow-wrap:anywhere] mt-0.5 italic">
+                              {order.customerCity}
+                            </p>
+                          )}
                         </td>
 
-                        {/* Items */}
-                        <td className="py-3.5 px-3">
-                          <span className="font-semibold text-slate-200">
-                            {item.quantity}x {item.color === 'negro' ? 'Negro' : 'Gris'}
-                          </span>{' '}
-                          &bull; Talle <span className="font-bold text-emerald-400">{item.size}</span>
+                        {/* Items - Option A: Stacked list / sub-rows */}
+                        <td className="py-3.5 px-3 min-w-[160px]">
+                          {items.length === 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                              Sin prendas asignadas
+                            </span>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {items.map((it, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5 text-xs">
+                                  <span
+                                    className="w-2.5 h-2.5 rounded-full border border-white/20 shrink-0"
+                                    style={{ backgroundColor: it.color === 'negro' ? '#111111' : '#64748b' }}
+                                  />
+                                  <span className="font-semibold text-slate-200">
+                                    {it.quantity}x {it.color === 'negro' ? 'Negro' : 'Gris'}
+                                  </span>
+                                  <span className="text-slate-500">&bull;</span>
+                                  <span className="font-bold text-emerald-400 font-mono">Talle {it.size}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </td>
 
                         {/* Financial */}
-                        <td className="py-3.5 px-3">
+                        <td className="py-3.5 px-3 tabular-nums whitespace-nowrap">
                           <p className="text-emerald-400 font-bold">
                             Seña: {formatPrice(order.depositAmount)}
                           </p>
@@ -876,14 +1030,14 @@ export default function AdminDashboardPage() {
                         </td>
 
                         {/* Method */}
-                        <td className="py-3.5 px-3 text-slate-300">
+                        <td className="py-3.5 px-3 text-slate-300 whitespace-nowrap">
                           <span className="capitalize">
                             {order.paymentMethod === 'mercadopago' ? 'Mercado Pago' : 'Transferencia'}
                           </span>
                         </td>
 
                         {/* Status Dropdown */}
-                        <td className="py-3.5 px-3">
+                        <td className="py-3.5 px-3 whitespace-nowrap">
                           <select
                             value={order.status}
                             onChange={(e) =>
@@ -913,17 +1067,23 @@ export default function AdminDashboardPage() {
                         </td>
 
                         {/* WhatsApp Action */}
-                        <td className="py-3.5 px-3 text-right">
-                          <a
-                            href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waNotifyText)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 text-[#25D366] text-[11px] font-semibold transition-colors"
-                            title="Avisar por WhatsApp"
-                          >
-                            <MessageCircle className="w-3 h-3 fill-current" />
-                            <span>WhatsApp</span>
-                          </a>
+                        <td className="py-3.5 px-3 text-right whitespace-nowrap">
+                          {cleanPhone ? (
+                            <a
+                              href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waNotifyText)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 text-[#25D366] text-[11px] font-semibold transition-colors"
+                              title="Avisar por WhatsApp"
+                            >
+                              <MessageCircle className="w-3 h-3 fill-current" />
+                              <span>WhatsApp</span>
+                            </a>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-slate-500 text-[11px] italic bg-white/[0.02]">
+                              Sin teléfono
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -932,6 +1092,40 @@ export default function AdminDashboardPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {filteredOrders.length > pageSize && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-white/[0.06] text-xs text-slate-400">
+              <div>
+                Mostrando <span className="font-semibold text-white tabular-nums">{(currentPage - 1) * pageSize + 1}</span> a{' '}
+                <span className="font-semibold text-white tabular-nums">
+                  {Math.min(currentPage * pageSize, filteredOrders.length)}
+                </span>{' '}
+                de <span className="font-semibold text-white tabular-nums">{filteredOrders.length}</span> reservas
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] disabled:opacity-30 disabled:pointer-events-none text-white font-medium transition-colors cursor-pointer"
+                >
+                  &larr; Anterior
+                </button>
+                <span className="px-2 font-mono text-slate-300 tabular-nums">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] disabled:opacity-30 disabled:pointer-events-none text-white font-medium transition-colors cursor-pointer"
+                >
+                  Siguiente &rarr;
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     ) : (
@@ -1440,6 +1634,11 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Dev Data Segmented Control Toggle (Dev environment / testing) */}
+      <Suspense fallback={null}>
+        <DevDataToggle onModeChange={() => setOrders(getStoredOrders())} />
+      </Suspense>
     </div>
   );
 }
