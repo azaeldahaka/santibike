@@ -287,17 +287,17 @@ export function CheckoutModal({
               </div>
             </div>
 
-            {/* Delivery Notice: Pickup Only */}
+            {/* Pickup Notice: Local Pickup Only */}
             <div className="p-3.5 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/20 space-y-1">
               <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
                 <Store className="w-4 h-4 shrink-0" />
-                <span>Forma de Entrega: Retiro en Local Oficial</span>
+                <span>Modalidad: Retiro en Local Oficial SantyBike</span>
               </div>
               <p className="text-xs text-white font-medium pl-6">
                 Bicicletería SantyBike &bull; {STORE_CONFIG.address}
               </p>
               <p className="text-[11px] text-slate-400 pl-6 leading-relaxed">
-                No realizamos envíos por el momento. Te avisaremos por WhatsApp apenas tu remera esté lista para retirar.
+                No realizamos envíos a domicilio. Te avisaremos por WhatsApp apenas tu remera esté lista para retirar en el local abonando el 50% restante.
               </p>
             </div>
 

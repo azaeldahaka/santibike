@@ -64,3 +64,11 @@ export interface FinancialCosts {
   targetMarginPercent: number;  // Margen deseado (ej. 45%)
   salePrice: number;            // Precio de venta actual
 }
+
+export interface CampaignDates {
+  preorderEndDate: string;          // Fecha ISO 'YYYY-MM-DD'
+  preorderEndDateFormatted: string; // Texto legible ej: '31 de Octubre'
+  estimatedPickupDate: string;      // Plazo de retiro ej: '10 a 15 días hábiles luego del cierre'
+  pickupGraceDays: number;          // Días de tolerancia para retirar en local (ej: 7)
+}
+

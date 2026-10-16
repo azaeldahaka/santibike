@@ -1,7 +1,6 @@
 'use client';
 
-import React from 'react';
-import { ProductColor, ProductSize } from '@/types';
+import { CampaignDates, ProductColor, ProductSize } from '@/types';
 import { STORE_CONFIG } from '@/data/mockData';
 import { formatPrice } from '@/lib/storage';
 import {
@@ -25,6 +24,7 @@ interface ProductConfiguratorProps {
   onOpenSizeGuide: () => void;
   onOpenCheckout: () => void;
   currentPrice?: number;
+  campaignDates?: CampaignDates;
 }
 
 export function ProductConfigurator({
@@ -37,6 +37,7 @@ export function ProductConfigurator({
   onOpenSizeGuide,
   onOpenCheckout,
   currentPrice,
+  campaignDates,
 }: ProductConfiguratorProps) {
   const SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
 
@@ -220,7 +221,7 @@ export function ProductConfigurator({
         <div className="flex items-start gap-2 pt-2 text-[11px] text-slate-400 border-t border-white/[0.06]">
           <Clock className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
           <span>
-            Preventa abierta hasta el <strong>{STORE_CONFIG.preorderEndDateFormatted}</strong>. Entrega estimada en 10-15 días hábiles post-cierre en Bicicletería SantyBike.
+            Preventa abierta hasta el <strong>{campaignDates?.preorderEndDateFormatted || STORE_CONFIG.preorderEndDateFormatted}</strong>. Retiro estimado en <strong>{campaignDates?.estimatedPickupDate || STORE_CONFIG.estimatedPickupDate}</strong> en Bicicletería SantyBike.
           </span>
         </div>
       </div>

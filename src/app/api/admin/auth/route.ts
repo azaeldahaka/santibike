@@ -107,12 +107,17 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE() {
-  const response = NextResponse.json({ success: true, message: 'Sesión cerrada.' });
+  const response = NextResponse.json({ success: true, message: 'Sesión cerrada exitosamente.' });
+  
+  response.cookies.delete('santybike_admin_session');
   response.cookies.set({
     name: 'santybike_admin_session',
     value: '',
     path: '/',
+    expires: new Date(0),
     maxAge: 0,
+    sameSite: 'lax',
   });
+
   return response;
 }

@@ -33,8 +33,18 @@ create table if not exists public.store_settings (
   gateway_fee_percent numeric not null default 0,
   target_margin_percent numeric not null default 50,
   sale_price numeric not null default 32000,
+  preorder_end_date text not null default '2026-10-31',
+  preorder_end_date_formatted text not null default '31 de Octubre',
+  estimated_pickup_date text not null default '10 a 15 días hábiles luego del cierre',
+  pickup_grace_days integer not null default 7,
   updated_at timestamptz not null default now()
 );
+
+-- Migración idéntica para tablas existentes que ya fueron creadas
+alter table public.store_settings add column if not exists preorder_end_date text not null default '2026-10-31';
+alter table public.store_settings add column if not exists preorder_end_date_formatted text not null default '31 de Octubre';
+alter table public.store_settings add column if not exists estimated_pickup_date text not null default '10 a 15 días hábiles luego del cierre';
+alter table public.store_settings add column if not exists pickup_grace_days integer not null default 7;
 
 -- 3. HABILITAR SEGURIDAD POR FILAS (Row Level Security - RLS)
 alter table public.orders enable row level security;
@@ -80,7 +90,11 @@ insert into public.store_settings (
   packaging_cost,
   gateway_fee_percent,
   target_margin_percent,
-  sale_price
+  sale_price,
+  preorder_end_date,
+  preorder_end_date_formatted,
+  estimated_pickup_date,
+  pickup_grace_days
 ) values (
   'default_settings',
   '4720',
@@ -89,7 +103,11 @@ insert into public.store_settings (
   1200,
   0,
   50,
-  32000
+  32000,
+  '2026-10-31',
+  '31 de Octubre',
+  '10 a 15 días hábiles luego del cierre',
+  7
 ) on conflict (id) do nothing;
 
 -- 6. INSERTAR PEDIDOS DE EJEMPLO INICIALES

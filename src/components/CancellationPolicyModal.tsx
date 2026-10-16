@@ -14,13 +14,16 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { STORE_CONFIG } from '@/data/mockData';
+import { CampaignDates } from '@/types';
 
 interface CancellationPolicyModalProps {
   isOpen: boolean;
   onClose: () => void;
+  campaignDates?: CampaignDates;
 }
 
-export function CancellationPolicyModal({ isOpen, onClose }: CancellationPolicyModalProps) {
+export function CancellationPolicyModal({ isOpen, onClose, campaignDates }: CancellationPolicyModalProps) {
+  const graceDays = campaignDates?.pickupGraceDays || STORE_CONFIG.pickupGraceDays || 7;
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -170,14 +173,14 @@ export function CancellationPolicyModal({ isOpen, onClose }: CancellationPolicyM
                   <div className="flex items-center gap-2">
                     <h4 className="font-bold text-white text-sm">Plazo de Retiro en Local</h4>
                     <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">
-                      7 Días Corridos
+                      {graceDays} Días Corridos
                     </span>
                   </div>
                   <p className="text-slate-300 leading-relaxed">
-                    Cuando tu prenda esté lista en nuestro local de Barrio Limache, te notificaremos por WhatsApp. A partir de esa fecha disponés de <strong>7 días corridos</strong> para retirar y abonar el saldo restante del 50%.
+                    Cuando tu prenda esté lista en nuestro local de Barrio Limache, te notificaremos por WhatsApp. A partir de esa fecha disponés de <strong>{graceDays} días corridos</strong> para retirar y abonar el saldo restante del 50%.
                   </p>
                   <p className="text-slate-400 text-[11px] leading-relaxed pt-1">
-                    ⚠️ Cumplidos los 7 días y tras avisos de cortesía, si la prenda no es retirada ni saldada, <strong>la reserva caducará</strong> y la remera se pondrá a la venta al público general en el local, reteniéndose la seña en compensación de gastos operativos.
+                    ⚠️ Cumplidos los {graceDays} días y tras avisos de cortesía, si la prenda no es retirada ni saldada, <strong>la reserva caducará</strong> y la remera se pondrá a la venta al público general en el local, reteniéndose la seña en compensación de gastos operativos.
                   </p>
                 </div>
               </div>
@@ -192,7 +195,7 @@ export function CancellationPolicyModal({ isOpen, onClose }: CancellationPolicyM
                 <div className="space-y-1">
                   <h4 className="font-bold text-white text-sm">Garantía SantyBike y Fallas de Fábrica</h4>
                   <p className="text-slate-400 leading-relaxed">
-                    Si por causas de fuerza mayor la entrega sufriera una demora mayor a <strong>15 días hábiles</strong> sobre la fecha estimada, tenés derecho a solicitar la <strong>devolución total de tu seña por transferencia bancaria</strong>. Cualquier defecto o falla de confección cuenta con reposición inmediata sin cargo o reintegro del 100%.
+                    Si por causas de fuerza mayor la disponibilidad para el retiro en local sufriera una demora mayor a <strong>15 días hábiles</strong> sobre la fecha estimada, tenés derecho a solicitar la <strong>devolución total de tu seña por transferencia bancaria</strong>. Cualquier defecto o falla de confección cuenta con reposición inmediata sin cargo o reintegro del 100%.
                   </p>
                 </div>
               </div>

@@ -1,9 +1,10 @@
-import { FinancialCosts, Order } from '@/types';
-import { INITIAL_FINANCIAL_COSTS, INITIAL_ORDERS } from '@/data/mockData';
+import { CampaignDates, FinancialCosts, Order } from '@/types';
+import { INITIAL_CAMPAIGN_DATES, INITIAL_FINANCIAL_COSTS, INITIAL_ORDERS } from '@/data/mockData';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const ORDERS_KEY = 'santibike_orders_v2';
 const COSTS_KEY = 'santibike_costs_v2';
+const CAMPAIGN_DATES_KEY = 'santibike_campaign_dates_v1';
 
 // ----------------------------------------------------
 // LOCAL STORAGE ADAPTER (Cache & Fallback)
@@ -142,6 +143,76 @@ export async function updateStorePrice(newPrice: number): Promise<boolean> {
   return true;
 }
 
+export function formatPreorderDate(isoDateStr: string): string {
+  if (!isoDateStr) return '';
+  const parts = isoDateStr.split('-');
+  if (parts.length < 3) return isoDateStr;
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const monthsEs = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  ];
+  if (month < 0 || month > 11 || isNaN(day)) return isoDateStr;
+  return `${day} de ${monthsEs[month]}`;
+}
+
+export function getStoredCampaignDates(): CampaignDates {
+  if (typeof window === 'undefined') return INITIAL_CAMPAIGN_DATES;
+  try {
+    const raw = localStorage.getItem(CAMPAIGN_DATES_KEY);
+    if (!raw) {
+      localStorage.setItem(CAMPAIGN_DATES_KEY, JSON.stringify(INITIAL_CAMPAIGN_DATES));
+      return INITIAL_CAMPAIGN_DATES;
+    }
+    const parsed = JSON.parse(raw);
+    return {
+      ...INITIAL_CAMPAIGN_DATES,
+      ...parsed,
+    };
+  } catch (e) {
+    console.error('Error reading campaign dates from localStorage', e);
+    return INITIAL_CAMPAIGN_DATES;
+  }
+}
+
+export function saveStoredCampaignDates(dates: CampaignDates): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CAMPAIGN_DATES_KEY, JSON.stringify(dates));
+    window.dispatchEvent(new Event('santybike_campaign_change'));
+
+    // Asynchronously update in Supabase
+    if (supabase) {
+      supabase
+        .from('store_settings')
+        .update({
+          preorder_end_date: dates.preorderEndDate,
+          preorder_end_date_formatted: dates.preorderEndDateFormatted,
+          estimated_pickup_date: dates.estimatedPickupDate,
+          pickup_grace_days: dates.pickupGraceDays,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', 'default_settings')
+        .then(({ error }) => {
+          if (error) console.warn('Supabase campaign dates update warning:', error.message);
+        });
+    }
+  } catch (e) {
+    console.error('Error saving campaign dates to localStorage', e);
+  }
+}
+
+export async function updateCampaignDates(partial: Partial<CampaignDates>): Promise<boolean> {
+  const current = getStoredCampaignDates();
+  const updated: CampaignDates = {
+    ...current,
+    ...partial,
+  };
+  saveStoredCampaignDates(updated);
+  return true;
+}
+
 // ----------------------------------------------------
 // SUPABASE CLOUD SYNC & FETCH
 // ----------------------------------------------------
@@ -252,6 +323,40 @@ export async function fetchLiveCosts(): Promise<FinancialCosts> {
     return cloudCosts;
   } catch (err) {
     return getStoredCosts();
+  }
+}
+
+export async function fetchLiveCampaignDates(): Promise<CampaignDates> {
+  if (!supabase) return getStoredCampaignDates();
+
+  try {
+    const { data, error } = await supabase
+      .from('store_settings')
+      .select('*')
+      .eq('id', 'default_settings')
+      .single();
+
+    if (error || !data) {
+      return getStoredCampaignDates();
+    }
+
+    if (data.preorder_end_date || data.preorder_end_date_formatted) {
+      const cloudDates: CampaignDates = {
+        preorderEndDate: data.preorder_end_date || INITIAL_CAMPAIGN_DATES.preorderEndDate,
+        preorderEndDateFormatted: data.preorder_end_date_formatted || INITIAL_CAMPAIGN_DATES.preorderEndDateFormatted,
+        estimatedPickupDate: data.estimated_pickup_date || INITIAL_CAMPAIGN_DATES.estimatedPickupDate,
+        pickupGraceDays: data.pickup_grace_days !== undefined ? Number(data.pickup_grace_days) : INITIAL_CAMPAIGN_DATES.pickupGraceDays,
+      };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(CAMPAIGN_DATES_KEY, JSON.stringify(cloudDates));
+        window.dispatchEvent(new Event('santybike_campaign_change'));
+      }
+      return cloudDates;
+    }
+
+    return getStoredCampaignDates();
+  } catch (err) {
+    return getStoredCampaignDates();
   }
 }
 

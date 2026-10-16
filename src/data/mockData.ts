@@ -1,4 +1,4 @@
-import { FinancialCosts, Order, ProductImage, SizeMeasurement } from '@/types';
+import { CampaignDates, FinancialCosts, Order, ProductImage, SizeMeasurement } from '@/types';
 
 export const STORE_CONFIG = {
   storeName: 'Bicicletería SantyBike',
@@ -17,9 +17,18 @@ export const STORE_CONFIG = {
   },
   preorderEndDate: '2026-10-31',
   preorderEndDateFormatted: '31 de Octubre',
-  estimatedDeliveryDate: '10 a 15 días hábiles luego del cierre',
+  estimatedPickupDate: '10 a 15 días hábiles luego del cierre',
+  estimatedDeliveryDate: '10 a 15 días hábiles luego del cierre', // alias de compatibilidad
   basePrice: 32000,
   depositPercentage: 50,
+  pickupGraceDays: 7,
+};
+
+export const INITIAL_CAMPAIGN_DATES: CampaignDates = {
+  preorderEndDate: STORE_CONFIG.preorderEndDate,
+  preorderEndDateFormatted: STORE_CONFIG.preorderEndDateFormatted,
+  estimatedPickupDate: STORE_CONFIG.estimatedPickupDate,
+  pickupGraceDays: STORE_CONFIG.pickupGraceDays,
 };
 
 export const SIZE_CHART: SizeMeasurement[] = [

@@ -1,14 +1,19 @@
 'use client';
 
 import React from 'react';
-import { Calendar, ShieldCheck, Sparkles, Truck, CheckCircle2 } from 'lucide-react';
+import { Calendar, ShieldCheck, Sparkles, Store, CheckCircle2 } from 'lucide-react';
 import { STORE_CONFIG } from '@/data/mockData';
+import { CampaignDates } from '@/types';
 
 interface HeroProps {
   onScrollToProduct: () => void;
+  campaignDates?: CampaignDates;
 }
 
-export function Hero({ onScrollToProduct }: HeroProps) {
+export function Hero({ onScrollToProduct, campaignDates }: HeroProps) {
+  const closingText = campaignDates?.preorderEndDateFormatted || STORE_CONFIG.preorderEndDateFormatted;
+  const pickupText = campaignDates?.estimatedPickupDate || STORE_CONFIG.estimatedPickupDate;
+
   return (
     <section className="relative overflow-hidden pt-8 pb-12 sm:pt-14 sm:pb-16 border-b border-white/[0.06]">
       {/* Subtle background glow */}
@@ -42,12 +47,12 @@ export function Hero({ onScrollToProduct }: HeroProps) {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm text-slate-300">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
             <Calendar className="w-4 h-4 text-emerald-400" />
-            <span>Cierre: <strong>{STORE_CONFIG.preorderEndDateFormatted}</strong></span>
+            <span>Cierre: <strong>{closingText}</strong></span>
           </div>
 
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-            <Truck className="w-4 h-4 text-emerald-400" />
-            <span>Entrega: <strong>{STORE_CONFIG.estimatedDeliveryDate}</strong></span>
+            <Store className="w-4 h-4 text-emerald-400" />
+            <span>Retiro: <strong>{pickupText}</strong></span>
           </div>
 
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">

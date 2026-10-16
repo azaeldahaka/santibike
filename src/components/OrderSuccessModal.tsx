@@ -114,7 +114,7 @@ ${itemsText}
 💳 *Pago:* Transferencia Bancaria (Naranja X)
 💰 *Seña Pagada:* ${formatPrice(order.depositAmount)}
 💵 *Saldo al Retirar:* ${formatPrice(order.remainingAmount)}
-📍 *Entrega:* Retiro en Local SantyBike (B° Limache, Salta)
+📍 *Punto de Retiro:* En Local SantyBike (B° Limache, Salta)
 🧾 *Comprobante:* Te adjunto la captura de la transferencia a continuación.
 
 ¡Muchas gracias!`;

@@ -11,8 +11,14 @@ import { OrderSuccessModal } from '@/components/OrderSuccessModal';
 import { CancellationPolicyModal } from '@/components/CancellationPolicyModal';
 import { MobileStickyBar } from '@/components/MobileStickyBar';
 import { Footer } from '@/components/Footer';
-import { Order, ProductColor, ProductSize } from '@/types';
-import { addOrder, getStoredCosts, fetchLiveCosts } from '@/lib/storage';
+import { CampaignDates, Order, ProductColor, ProductSize } from '@/types';
+import {
+  addOrder,
+  getStoredCosts,
+  fetchLiveCosts,
+  getStoredCampaignDates,
+  fetchLiveCampaignDates,
+} from '@/lib/storage';
 import {
   CreditCard,
   PackageCheck,
@@ -33,6 +39,7 @@ export default function StorefrontPage() {
   const [selectedSize, setSelectedSize] = useState<ProductSize>('L');
   const [quantity, setQuantity] = useState(1);
   const [currentPrice, setCurrentPrice] = useState<number>(STORE_CONFIG.basePrice);
+  const [campaignDates, setCampaignDates] = useState<CampaignDates>(getStoredCampaignDates());
 
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -41,7 +48,7 @@ export default function StorefrontPage() {
 
   const productSectionRef = useRef<HTMLDivElement>(null);
 
-  // Sync live price from Supabase / localStorage so changes in /admin reflect immediately for customers
+  // Sync live price & campaign dates from Supabase / localStorage so changes in /admin reflect immediately for customers
   useEffect(() => {
     const cached = getStoredCosts();
     if (cached?.salePrice) {
@@ -52,6 +59,24 @@ export default function StorefrontPage() {
         setCurrentPrice(live.salePrice);
       }
     });
+
+    const cachedDates = getStoredCampaignDates();
+    if (cachedDates) {
+      setCampaignDates(cachedDates);
+    }
+    fetchLiveCampaignDates().then((liveDates) => {
+      if (liveDates) {
+        setCampaignDates(liveDates);
+      }
+    });
+
+    const handleCampaignChange = () => {
+      setCampaignDates(getStoredCampaignDates());
+    };
+    window.addEventListener('santybike_campaign_change', handleCampaignChange);
+    return () => {
+      window.removeEventListener('santybike_campaign_change', handleCampaignChange);
+    };
   }, []);
 
   const handleScrollToProduct = () => {
@@ -71,7 +96,10 @@ export default function StorefrontPage() {
 
       <main className="flex-1">
         {/* Hero Banner */}
-        <Hero onScrollToProduct={handleScrollToProduct} />
+        <Hero
+          onScrollToProduct={handleScrollToProduct}
+          campaignDates={campaignDates}
+        />
 
         {/* Product Section */}
         <section
@@ -96,6 +124,7 @@ export default function StorefrontPage() {
                 onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
                 onOpenCheckout={() => setIsCheckoutOpen(true)}
                 currentPrice={currentPrice}
+                campaignDates={campaignDates}
               />
             </div>
           </div>
@@ -146,7 +175,7 @@ export default function StorefrontPage() {
                 </div>
                 <h4 className="text-lg font-bold text-white mb-2">Retirás y Saldás el Resto</h4>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Cuando la tanda finalice su producción (10 a 15 días tras el cierre del {STORE_CONFIG.preorderEndDateFormatted}), te avisamos por WhatsApp para retirar en el local abonando el 50% restante.
+                  Cuando la tanda finalice su producción ({campaignDates.estimatedPickupDate} tras el cierre del {campaignDates.preorderEndDateFormatted}), te avisamos por WhatsApp para retirar en el local abonando el 50% restante.
                 </p>
               </div>
             </div>
@@ -244,6 +273,7 @@ export default function StorefrontPage() {
       <CancellationPolicyModal
         isOpen={isPolicyOpen}
         onClose={() => setIsPolicyOpen(false)}
+        campaignDates={campaignDates}
       />
 
       <OrderSuccessModal
