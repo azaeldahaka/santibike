@@ -55,14 +55,14 @@ export function ProductGallery({ selectedColor }: ProductGalleryProps) {
       </div>
 
       {/* Thumbnails Row */}
-      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+      <div className="flex gap-3">
         {filteredImages.map((img) => {
           const isSelected = activeImage.id === img.id;
           return (
             <button
               key={img.id}
               onClick={() => setActiveImage(img)}
-              className={`relative aspect-[3/4] rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+              className={`relative w-20 sm:w-24 aspect-[3/4] rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
                 isSelected
                   ? 'border-emerald-500 scale-[1.03] shadow-md shadow-emerald-500/20 ring-2 ring-emerald-500/30'
                   : 'border-white/[0.08] hover:border-white/30 opacity-70 hover:opacity-100'

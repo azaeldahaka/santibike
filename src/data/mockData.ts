@@ -68,32 +68,6 @@ export const PRODUCT_IMAGES: ProductImage[] = [
     title: 'Espalda - Gris Melange',
     color: 'gris',
   },
-  {
-    id: 'detalle-pecho-negro',
-    url: '/images/details/logo-pecho-negra.jpg',
-    alt: 'Detalle estampado de pecho en remera negra',
-    title: 'Estampa Pecho Alta Definición',
-    color: 'negro',
-  },
-  {
-    id: 'detalle-pecho-gris',
-    url: '/images/details/logo-pecho-gris.jpg',
-    alt: 'Detalle estampado de pecho en remera gris',
-    title: 'Estampa Contorneada Gris',
-    color: 'gris',
-  },
-  {
-    id: 'detalle-ciclista',
-    url: '/images/details/logo-ciclista-macro.jpg',
-    alt: 'Detalle Macro Emblema Ciclista SantyBike',
-    title: 'Detalle Emblema Ciclista',
-  },
-  {
-    id: 'detalle-ruedo',
-    url: '/images/details/detalle-bicycles-ruedo.jpg',
-    alt: 'Detalle BICYCLES estampado en el ruedo inferior',
-    title: 'Sello BICYCLES en Ruedo',
-  },
 ];
 
 export const INITIAL_FINANCIAL_COSTS: FinancialCosts = {
