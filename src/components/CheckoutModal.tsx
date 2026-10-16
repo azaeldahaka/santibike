@@ -224,7 +224,7 @@ export function CheckoutModal({
                 <Store className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs font-bold text-white">Retiro en Local</p>
-                  <p className="text-[10px] text-emerald-400 font-semibold">Gratis en San Ibike</p>
+                  <p className="text-[10px] text-emerald-400 font-semibold">Gratis en SantyBike (Salta)</p>
                 </div>
               </button>
 

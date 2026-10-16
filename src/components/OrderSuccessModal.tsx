@@ -169,6 +169,17 @@ export function OrderSuccessModal({ order, onClose }: OrderSuccessModalProps) {
             <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
             <span>{STORE_CONFIG.hours}</span>
           </div>
+          <div className="pt-1">
+            <a
+              href={STORE_CONFIG.mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-semibold text-[11px] underline underline-offset-2"
+            >
+              <span>Ver cómo llegar en Google Maps</span>
+              <span>&rarr;</span>
+            </a>
+          </div>
         </div>
 
         {/* Action Button: Send via WhatsApp */}

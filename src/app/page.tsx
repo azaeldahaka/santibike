@@ -20,6 +20,10 @@ import {
   CheckCircle2,
   Calendar,
   Layers,
+  MapPin,
+  Navigation,
+  ExternalLink,
+  Clock,
 } from 'lucide-react';
 import { STORE_CONFIG } from '@/data/mockData';
 
@@ -127,6 +131,76 @@ export default function StorefrontPage() {
                 <p className="text-xs text-slate-400 leading-relaxed">
                   Cuando la tanda finalice su producción (10 a 15 días tras el cierre del {STORE_CONFIG.preorderEndDateFormatted}), te avisamos por WhatsApp para retirar en el local abonando el 50% restante.
                 </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Local & Google Maps Section */}
+        <section className="py-14 sm:py-20 border-t border-white/[0.06] bg-[#090a0d]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+              {/* Left Column: Store details */}
+              <div className="lg:col-span-5 space-y-6">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                    Punto de Retiro Oficial
+                  </span>
+                  <h3 className="text-2xl sm:text-3xl font-black text-white mt-3 uppercase tracking-tight">
+                    {STORE_CONFIG.storeName}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-400 mt-2 leading-relaxed">
+                    Vení a conocer el taller y retirás tu remera en persona. Nos encontramos en Salta Capital con atención personalizada.
+                  </p>
+                </div>
+
+                <div className="space-y-3.5 text-xs">
+                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <MapPin className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-white">Dirección:</p>
+                      <p className="text-slate-300 mt-0.5">{STORE_CONFIG.address}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <Clock className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-white">Horarios de Atención:</p>
+                      <p className="text-slate-300 mt-0.5">{STORE_CONFIG.hours}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <a
+                    href={STORE_CONFIG.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.1] hover:border-emerald-500/50 shadow-lg transition-all"
+                  >
+                    <Navigation className="w-4 h-4 text-emerald-400" />
+                    <span>Cómo llegar en Google Maps</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Right Column: Embedded Google Maps */}
+              <div className="lg:col-span-7">
+                <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden border border-white/[0.1] shadow-2xl bg-[#11141a]">
+                  <iframe
+                    title="Ubicación Bicicletería SantyBike en Google Maps"
+                    src={STORE_CONFIG.mapsEmbedUrl}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    allowFullScreen={false}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    className="w-full h-full grayscale-[15%] contrast-[1.05]"
+                  />
+                </div>
               </div>
             </div>
           </div>

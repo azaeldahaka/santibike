@@ -25,7 +25,7 @@ export function Footer() {
 
           {/* Col 2: Store Info */}
           <div className="space-y-2">
-            <h4 className="font-bold text-white text-xs uppercase tracking-wider">Bicicletería</h4>
+            <h4 className="font-bold text-white text-xs uppercase tracking-wider">{STORE_CONFIG.storeName}</h4>
             <div className="flex items-start gap-2 text-slate-400">
               <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>{STORE_CONFIG.address}</span>
@@ -33,6 +33,17 @@ export function Footer() {
             <div className="flex items-start gap-2 text-slate-400">
               <Clock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>{STORE_CONFIG.hours}</span>
+            </div>
+            <div className="pt-1">
+              <a
+                href={STORE_CONFIG.mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition-colors"
+              >
+                <span>Abrir en Google Maps</span>
+                <span className="text-[10px]">&rarr;</span>
+              </a>
             </div>
           </div>
 

@@ -1,17 +1,20 @@
 import { FinancialCosts, Order, ProductImage, SizeMeasurement } from '@/types';
 
 export const STORE_CONFIG = {
-  storeName: 'San Ibike Bicycles',
-  phoneWhatsApp: '+5491100000000', // Reemplazable con el real
-  phoneWhatsAppDisplay: '+54 9 11 0000-0000',
-  instagram: '@sanibike.oficial',
-  address: 'Av. Principal 1234, Local San Ibike',
-  hours: 'Lunes a Viernes de 09:30 a 19:30 hs | Sábados 10:00 a 14:00 hs',
+  storeName: 'Bicicletería SantyBike',
+  tagline: 'San Ibike Bicycles & Merch Oficial',
+  phoneWhatsApp: '+5493870000000',
+  phoneWhatsAppDisplay: '+54 9 387 000-0000',
+  instagram: '@santibike.oficial',
+  address: 'B° Ciudad Valdivia, Salta Capital, Salta',
+  mapsUrl: 'https://maps.app.goo.gl/eTQtYkXa4bK9x4jLA',
+  mapsEmbedUrl: 'https://maps.google.com/maps?q=-24.8523147,-65.4334491&z=17&output=embed',
+  hours: 'Lunes a Sábado de 09:00 a 13:00 y 17:00 a 21:00 hs',
   bankInfo: {
     bank: 'Mercado Pago / Banco Santander',
-    alias: 'SANIBIKE.OFICIAL.MP',
+    alias: 'SANTYBIKE.OFICIAL',
     cbu: '0000003100045892019284',
-    holder: 'Bicicletería San Ibike',
+    holder: 'Bicicletería SantyBike',
     cuit: '20-38491823-9',
   },
   preorderEndDate: '2026-10-31',
